@@ -1,0 +1,47 @@
+{
+  "name": "samvadql-frontend",
+  "version": "1.0.0",
+  "description": "SamvadQL Text-to-SQL Frontend",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.11.0",
+    "@emotion/styled": "^11.11.0",
+    "@hookform/resolvers": "^3.3.0",
+    "@reduxjs/toolkit": "^1.9.0",
+    "@tailwindcss/postcss": "^4.1.11",
+    "axios": "^1.6.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.525.0",
+    "next": "^14.0.0",
+    "postcss": "^8.5.6",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-hook-form": "^7.47.0",
+    "react-redux": "^8.1.0",
+    "react-syntax-highlighter": "^15.5.0",
+    "socket.io-client": "^4.7.0",
+    "tailwind-merge": "^3.3.1",
+    "tailwindcss": "^4.1.11",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.8.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@types/react-syntax-highlighter": "^15.5.0",
+    "@typescript-eslint/eslint-plugin": "^6.7.0",
+    "@typescript-eslint/parser": "^6.7.0",
+    "eslint": "^8.51.0",
+    "eslint-config-next": "^14.0.0",
+    "tw-animate-css": "^1.3.5",
+    "typescript": "^5.2.0"
+  }
+}

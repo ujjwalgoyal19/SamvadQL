@@ -1,179 +1,75 @@
 /**
- * TypeScript interfaces for SamvadQL frontend
+ * Main types export file for the frontend application
  */
 
-export enum DatabaseType {
-  POSTGRESQL = 'postgresql',
-  MYSQL = 'mysql',
-  SNOWFLAKE = 'snowflake',
-  BIGQUERY = 'bigquery'
+// Re-export all API types
+export * from './api';
+
+// Re-export WebSocket types
+export * from './websocket';
+
+// Additional frontend-specific types
+export interface AppConfig {
+  apiBaseUrl: string;
+  wsBaseUrl: string;
+  environment: 'development' | 'production' | 'test';
+  version: string;
+  features: {
+    realTimeStreaming: boolean;
+    offlineMode: boolean;
+    analytics: boolean;
+    feedback: boolean;
+  };
 }
 
-export enum ValidationStatus {
-  VALID = 'valid',
-  INVALID = 'invalid',
-  WARNING = 'warning',
-  UNSAFE = 'unsafe'
-}
-
-export enum FeedbackType {
-  ACCEPT = 'accept',
-  REJECT = 'reject',
-  MODIFY = 'modify'
-}
-
-export interface ColumnSchema {
-  name: string;
-  dataType: string;
-  description?: string;
-  sampleValues: any[];
-  isNullable: boolean;
-  isPrimaryKey: boolean;
-  isForeignKey: boolean;
-}
-
-export interface TableSchema {
-  name: string;
-  databaseId: string;
-  columns: ColumnSchema[];
-  description?: string;
-  sampleQueries: string[];
-  tier?: string;
-  tags: string[];
-  rowCount?: number;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface QueryRequest {
-  query: string;
-  userId: string;
-  databaseId: string;
-  selectedTables?: string[];
-  context?: Record<string, any>;
-  sessionId?: string;
-  requestId: string;
-}
-
-export interface ValidationResult {
-  isValid: boolean;
-  errors: string[];
-  warnings: string[];
-  isDestructive: boolean;
-  estimatedCost?: number;
-  executionPlan?: string;
-}
-
-export interface OptimizationSuggestion {
-  type: string;
-  description: string;
-  impact: 'high' | 'medium' | 'low';
-  suggestedSql?: string;
-}
-
-export interface QueryResponse {
-  sql: string;
-  explanation: string;
-  confidenceScore: number;
-  selectedTables: string[];
-  validationStatus: ValidationStatus;
-  optimizationSuggestions: OptimizationSuggestion[];
-  executionTimeEstimate?: number;
-  requestId?: string;
-  generatedAt: string;
-}
-
-export interface TableRecommendation {
-  tableSchema: TableSchema;
-  relevanceScore: number;
-  matchReason: string;
-  summary?: string;
-}
-
-export interface QueryContext {
-  userId: string;
-  sessionId: string;
-  databaseType: DatabaseType;
-  previousQueries: string[];
-  userPreferences: Record<string, any>;
-}
-
-export interface UserFeedback {
+export interface User {
   id: string;
-  userId: string;
-  queryId: string;
-  originalQuery: string;
-  generatedSql: string;
-  feedbackType: FeedbackType;
-  comments?: string;
-  rating?: number;
-  createdAt: string;
-}
-
-export interface StreamingMessage {
-  type: 'query_progress' | 'query_complete' | 'error' | 'table_suggestions';
-  data: any;
-  requestId: string;
-  timestamp: string;
-}
-
-export interface ApiError {
-  message: string;
-  code: string;
-  details?: Record<string, any>;
-}
-
-export interface ApiResponse<T> {
-  data?: T;
-  error?: ApiError;
-  success: boolean;
-}
-
-// WebSocket message types
-export interface WebSocketMessage {
-  type: string;
-  payload: any;
-  requestId?: string;
-}
-
-// UI State interfaces
-export interface QueryState {
-  isLoading: boolean;
-  currentQuery: string;
-  currentResponse?: QueryResponse;
-  streamingContent: string;
-  error?: string;
-  selectedTables: string[];
-  tableRecommendations: TableRecommendation[];
-}
-
-export interface DatabaseState {
-  connectedDatabases: DatabaseConnection[];
-  currentDatabase?: string;
-  availableTables: TableSchema[];
-  isLoadingTables: boolean;
-}
-
-export interface DatabaseConnection {
-  id: string;
-  name: string;
-  type: DatabaseType;
-  isConnected: boolean;
-  lastConnected?: string;
-}
-
-export interface UserSession {
-  userId: string;
-  sessionId: string;
-  isAuthenticated: boolean;
+  username: string;
+  email?: string;
   preferences: UserPreferences;
+  permissions: string[];
+  created_at: string;
+  last_active: string;
 }
 
 export interface UserPreferences {
-  theme: 'light' | 'dark';
+  theme: 'light' | 'dark' | 'auto';
+  language: string;
+  timezone: string;
   defaultDatabase?: string;
-  queryHistory: QueryHistoryItem[];
-  favoriteQueries: string[];
+  queryHistory: boolean;
+  notifications: {
+    email: boolean;
+    push: boolean;
+    inApp: boolean;
+  };
+  ui: {
+    showLineNumbers: boolean;
+    autoComplete: boolean;
+    syntaxHighlighting: boolean;
+    wordWrap: boolean;
+  };
+}
+
+export interface Session {
+  id: string;
+  user_id: string;
+  created_at: string;
+  expires_at: string;
+  last_active: string;
+  ip_address?: string;
+  user_agent?: string;
+}
+
+// UI State types
+export interface QueryEditorState {
+  query: string;
+  selectedTables: string[];
+  isLoading: boolean;
+  isStreaming: boolean;
+  currentResponse?: QueryResponse;
+  history: QueryHistoryItem[];
+  suggestions: string[];
 }
 
 export interface QueryHistoryItem {
@@ -181,6 +77,183 @@ export interface QueryHistoryItem {
   query: string;
   sql: string;
   timestamp: string;
-  databaseId: string;
   success: boolean;
+  execution_time?: number;
 }
+
+export interface TableExplorerState {
+  selectedDatabase?: string;
+  tables: TableSchema[];
+  filteredTables: TableSchema[];
+  searchQuery: string;
+  selectedTier?: string;
+  selectedTags: string[];
+  isLoading: boolean;
+  error?: string;
+}
+
+export interface NotificationState {
+  notifications: Notification[];
+  unreadCount: number;
+}
+
+export interface Notification {
+  id: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  title: string;
+  message: string;
+  timestamp: string;
+  read: boolean;
+  actions?: NotificationAction[];
+}
+
+export interface NotificationAction {
+  label: string;
+  action: () => void;
+  style?: 'primary' | 'secondary' | 'danger';
+}
+
+// Form types
+export interface QueryForm {
+  query: string;
+  database_id: string;
+  selected_tables: string[];
+  context?: Record<string, any>;
+}
+
+export interface FeedbackForm {
+  feedback_type: 'accept' | 'reject' | 'modify';
+  rating?: number;
+  comments?: string;
+}
+
+export interface TableFilterForm {
+  search: string;
+  tier?: string;
+  tags: string[];
+  database_id?: string;
+}
+
+// Component prop types
+export interface QueryEditorProps {
+  initialQuery?: string;
+  onQuerySubmit: (query: QueryForm) => void;
+  onQueryChange?: (query: string) => void;
+  isLoading?: boolean;
+  disabled?: boolean;
+}
+
+export interface TableSelectorProps {
+  tables: TableSchema[];
+  selectedTables: string[];
+  onSelectionChange: (tables: string[]) => void;
+  maxSelections?: number;
+  disabled?: boolean;
+}
+
+export interface ResultsViewerProps {
+  response?: QueryResponse;
+  isStreaming?: boolean;
+  onFeedback?: (feedback: FeedbackForm) => void;
+  onRefine?: (refinement: string) => void;
+}
+
+// Error types
+export interface AppError {
+  code: string;
+  message: string;
+  details?: any;
+  timestamp: string;
+  context?: {
+    component?: string;
+    action?: string;
+    userId?: string;
+  };
+}
+
+// Loading states
+export type LoadingState = 'idle' | 'loading' | 'success' | 'error';
+
+export interface AsyncState<T> {
+  data?: T;
+  loading: LoadingState;
+  error?: AppError;
+  lastUpdated?: string;
+}
+
+// Route types
+export interface RouteParams {
+  [key: string]: string | undefined;
+}
+
+export interface NavigationItem {
+  id: string;
+  label: string;
+  path: string;
+  icon?: string;
+  badge?: string | number;
+  children?: NavigationItem[];
+  permissions?: string[];
+}
+
+// Theme types
+export interface Theme {
+  name: string;
+  colors: {
+    primary: string;
+    secondary: string;
+    success: string;
+    warning: string;
+    error: string;
+    info: string;
+    background: string;
+    surface: string;
+    text: {
+      primary: string;
+      secondary: string;
+      disabled: string;
+    };
+  };
+  typography: {
+    fontFamily: string;
+    fontSize: {
+      xs: string;
+      sm: string;
+      md: string;
+      lg: string;
+      xl: string;
+    };
+  };
+  spacing: {
+    xs: string;
+    sm: string;
+    md: string;
+    lg: string;
+    xl: string;
+  };
+}
+
+// Analytics types
+export interface AnalyticsEvent {
+  name: string;
+  properties?: Record<string, any>;
+  timestamp: string;
+  user_id?: string;
+  session_id?: string;
+}
+
+export interface PerformanceMetrics {
+  queryExecutionTime: number;
+  renderTime: number;
+  networkLatency: number;
+  memoryUsage?: number;
+}
+
+// Utility types
+export type DeepPartial<T> = {
+  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
+};
+
+export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+
+export type RequiredFields<T, K extends keyof T> = T & Required<Pick<T, K>>;

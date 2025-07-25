@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import AsyncIterator, List, Optional, Dict, Any
 from langchain.schema import BaseMessage
 from langchain.callbacks.base import BaseCallbackHandler
-from models.base import (
+from models import (
     QueryRequest,
     QueryResponse,
     TableSchema,

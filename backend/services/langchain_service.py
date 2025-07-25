@@ -19,11 +19,14 @@ from langchain.memory import ConversationBufferMemory
 
 from core.interfaces import LLMServiceInterface
 from core.config import settings
-from models.base import (
+from models import (
     QueryRequest,
     QueryResponse,
     TableSchema,
+    ValidationResult,
     ValidationStatus,
+    DatabaseType,
+    OptimizationSuggestion,
 )
 
 
@@ -133,6 +136,7 @@ Please provide:
                 validation_status=ValidationStatus.VALID,
                 optimization_suggestions=[],
                 request_id=context.get("request_id") if context else None,
+                execution_time_estimate=0,
             )
 
             # Instead of yielding, return an async iterator that yields once
@@ -149,6 +153,7 @@ Please provide:
                 validation_status=ValidationStatus.INVALID,
                 optimization_suggestions=[],
                 request_id=context.get("request_id") if context else None,
+                execution_time_estimate=0,
             )
 
             async def error_response_gen():
@@ -216,6 +221,7 @@ Context: {context}"""
                 validation_status=ValidationStatus.VALID,
                 optimization_suggestions=[],
                 request_id=context.get("request_id") if context else None,
+                execution_time_estimate=0,
             )
 
             async def single_response():
@@ -232,6 +238,7 @@ Context: {context}"""
                 validation_status=ValidationStatus.INVALID,
                 optimization_suggestions=[],
                 request_id=context.get("request_id") if context else None,
+                execution_time_estimate=0,
             )
 
             async def error_response_gen():

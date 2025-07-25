@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 import uvicorn
 
 from core.config import settings
-from models.base import QueryRequest
+from models import QueryRequest
 
 
 @asynccontextmanager

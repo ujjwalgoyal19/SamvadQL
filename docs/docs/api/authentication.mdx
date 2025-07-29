@@ -1,0 +1,114 @@
+---
+title: "Authentication"
+api: "POST /auth/login"
+description: "Authenticate users and manage JWT tokens"
+---
+
+## Login
+
+<api method="POST" url="/auth/login">
+  Authenticate user and receive JWT token.
+</api>
+
+### Request Body
+
+<ParamField body="username" type="string" required>
+  User's email address or username
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  User's password
+</ParamField>
+
+### Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="data">
+    <ResponseField name="access_token" type="string">
+      JWT access token for API authentication
+    </ResponseField>
+    <ResponseField name="token_type" type="string">
+      Token type (always "bearer")
+    </ResponseField>
+    <ResponseField name="expires_in" type="number">
+      Token expiration time in seconds
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X POST "http://localhost:8000/api/v1/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "user@example.com",
+    "password": "your-password"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('/api/v1/auth/login', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    username: 'user@example.com',
+    password: 'your-password'
+  })
+});
+```
+</RequestExample>
+
+<ResponseExample>
+```json Success Response
+{
+  "success": true,
+  "data": {
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "token_type": "bearer",
+    "expires_in": 3600
+  },
+  "timestamp": "2024-01-01T00:00:00Z"
+}
+```
+</ResponseExample>
+
+---
+
+## Refresh Token
+
+<api method="POST" url="/auth/refresh">
+  Refresh JWT token using existing token.
+</api>
+
+### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token for authentication
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X POST "http://localhost:8000/api/v1/auth/refresh" \
+  -H "Authorization: Bearer your-jwt-token"
+```
+</RequestExample>
+
+<ResponseExample>
+```json Success Response
+{
+  "success": true,
+  "data": {
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "token_type": "bearer",
+    "expires_in": 3600
+  },
+  "timestamp": "2024-01-01T00:00:00Z"
+}
+```
+</ResponseExample>

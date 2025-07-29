@@ -1,0 +1,18 @@
+# Dependency directories
+node_modules
+
+# Build output
+dist
+.next
+out
+
+# Local environment variables
+.env
+.env.local
+
+# Git files
+.git
+.gitignore
+
+# PNPM files
+pnpm-lock.yaml

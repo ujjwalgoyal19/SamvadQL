@@ -145,9 +145,61 @@ This project is currently in active development. The current implementation incl
 - Frontend components and real-time streaming
 - Background services and job scheduling
 
+## Documentation
+
+Comprehensive documentation is available using Mintlify:
+
+### Quick Start Documentation
+
+```bash
+# Start documentation server with Docker (recommended)
+./scripts/dev-docs.sh    # Linux/Mac
+scripts\dev-docs.bat     # Windows
+
+# Or with Docker Compose directly:
+docker-compose up -d docs
+
+# Or manually (local development):
+cd docs && npm install && npm start
+```
+
+Visit [http://localhost:3001](http://localhost:3001) (Docker) or [http://localhost:3000](http://localhost:3000) (local) for:
+
+- 📖 **Getting Started**: Installation and quick start guides
+- 🏗️ **Architecture**: System design and component overview
+- 📚 **API Reference**: Auto-generated from backend code
+- 🧩 **Components**: Auto-generated from frontend components
+- 🛠️ **Development**: Setup, testing, and deployment guides
+
+### Auto-Generated Documentation
+
+The documentation system automatically generates:
+
+- **API docs** from Python docstrings and FastAPI routes
+- **Component docs** from React TypeScript interfaces
+- **Real-time updates** when source code changes
+
+```bash
+# With Docker (automatic generation)
+docker-compose up -d docs
+
+# Or generate manually (local development)
+cd docs && npm run generate-all-docs
+
+# Watch for changes and auto-generate (local development)
+cd docs && node scripts/watch-and-generate.js
+```
+
 ## Contributing
 
 This project follows a spec-driven development approach. See `.kiro/specs/samvadql-text-to-sql/` for detailed requirements, design, and implementation tasks.
+
+### Development Workflow
+
+1. Read the [Development Setup](docs/docs/development/setup.md) guide
+2. Check the [Architecture Overview](docs/docs/architecture/overview.md)
+3. Follow the [Contributing Guidelines](docs/docs/development/contributing.md)
+4. Use the documentation system to understand APIs and components
 
 ## License
 
@@ -155,4 +207,6 @@ This project follows a spec-driven development approach. See `.kiro/specs/samvad
 
 ## Support
 
-[Support information to be added]
+- 📖 [Documentation](http://localhost:3000) (after running docs server)
+- 🐛 [Issues](https://github.com/your-org/samvadql/issues)
+- 💬 [Discussions](https://github.com/your-org/samvadql/discussions)

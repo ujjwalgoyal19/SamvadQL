@@ -1,0 +1,93 @@
+---
+title: "API Introduction"
+description: "SamvadQL REST API and WebSocket interface for text-to-SQL conversion"
+---
+
+## Base URL
+
+```
+http://localhost:8000/api/v1
+```
+
+## Authentication
+
+All API endpoints require authentication using JWT tokens. Include the token in the Authorization header:
+
+```bash
+Authorization: Bearer <your-jwt-token>
+```
+
+## Response Format
+
+All API responses follow a consistent format:
+
+```json
+{
+  "success": true,
+  "data": {},
+  "message": "Success message",
+  "timestamp": "2024-01-01T00:00:00Z"
+}
+```
+
+## Error Handling
+
+<Tabs>
+  <Tab title="Error Response">
+    ```json
+    {
+      "success": false,
+      "error": {
+        "code": "VALIDATION_ERROR",
+        "message": "Invalid input parameters",
+        "details": {}
+      },
+      "timestamp": "2024-01-01T00:00:00Z"
+    }
+    ```
+  </Tab>
+  <Tab title="Common Error Codes">
+    | Code | Description |
+    |------|-------------|
+    | `VALIDATION_ERROR` | Invalid input parameters |
+    | `AUTHENTICATION_ERROR` | Invalid or missing token |
+    | `RATE_LIMIT_ERROR` | Too many requests |
+    | `DATABASE_ERROR` | Database connection issue |
+    | `LLM_ERROR` | Language model service error |
+  </Tab>
+</Tabs>
+
+## Rate Limiting
+
+<Info>
+API endpoints are rate-limited to prevent abuse:
+- **Authenticated users**: 100 requests per minute
+- **Unauthenticated requests**: 10 requests per minute
+</Info>
+
+## WebSocket Connection
+
+Real-time features use WebSocket connections:
+
+```javascript
+const socket = io('ws://localhost:8000/ws');
+
+socket.on('connect', () => {
+  console.log('Connected to SamvadQL');
+});
+
+socket.on('sql_generation', (data) => {
+  console.log('SQL chunk received:', data);
+});
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/api-reference/authentication">
+    Learn how to authenticate with the API
+  </Card>
+  <Card title="Query Endpoints" icon="search" href="/api-reference/query/generate">
+    Generate and execute SQL queries
+  </Card>
+</CardGroup>

@@ -1,0 +1,234 @@
+---
+title: 'Components Overview'
+description: 'React components and hooks for building SamvadQL interfaces'
+---
+
+## Architecture
+
+SamvadQL frontend is built with React 18+ and TypeScript, using modern patterns and best practices.
+
+<CardGroup cols={2}>
+  <Card
+    title="UI Components"
+    icon="puzzle-piece"
+    href="/components/query-editor"
+  >
+    Reusable interface elements built with shadcn/ui
+  </Card>
+  <Card title="Custom Hooks" icon="hook" href="/components/hooks/use-query">
+    React hooks for state management and side effects
+  </Card>
+  <Card title="Services" icon="server" href="/components/services/api-client">
+    API clients and external service integrations
+  </Card>
+  <Card title="Types" icon="code" href="/components/types">
+    TypeScript definitions for type safety
+  </Card>
+</CardGroup>
+
+## Design System
+
+We use [shadcn/ui](https://ui.shadcn.com/) as our component library, built on top of:
+
+<Tabs>
+  <Tab title="Radix UI">
+    Accessible, unstyled components that provide the foundation for our UI
+    elements
+  </Tab>
+  <Tab title="Tailwind CSS">
+    Utility-first CSS framework for rapid styling and consistent design
+  </Tab>
+  <Tab title="Lucide React">
+    Beautiful, customizable icons with consistent styling
+  </Tab>
+</Tabs>
+
+## Component Structure
+
+```
+src/
+├── components/
+│   ├── ui/              # shadcn/ui components
+│   ├── query/           # Query-related components
+│   ├── schema/          # Schema browser components
+│   └── chat/            # Chat interface components
+├── hooks/               # Custom React hooks
+├── services/            # API and WebSocket clients
+├── types/               # TypeScript definitions
+└── lib/                 # Utility functions
+```
+
+## Styling Conventions
+
+<AccordionGroup>
+  <Accordion title="Tailwind CSS Classes">
+    Use Tailwind CSS classes for styling with consistent spacing and colors
+    ```tsx
+    <div className="flex items-center space-x-4 p-6 bg-white rounded-lg shadow-sm">
+      <Button className="bg-primary hover:bg-primary/90">
+        Generate SQL
+      </Button>
+    </div>
+    ```
+  </Accordion>
+
+  <Accordion title="Component Variants">
+    Follow shadcn/ui patterns for component variants using class-variance-authority
+    ```tsx
+    const buttonVariants = cva(
+      "inline-flex items-center justify-center rounded-md text-sm font-medium",
+      {
+        variants: {
+          variant: {
+            default: "bg-primary text-primary-foreground hover:bg-primary/90",
+            destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+          },
+        },
+      }
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="CSS Variables">
+    Use CSS variables for theme customization and dark mode support
+    ```css
+    :root {
+      --primary: 222.2 84% 4.9%;
+      --primary-foreground: 210 40% 98%;
+      --background: 0 0% 100%;
+      --foreground: 222.2 84% 4.9%;
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Responsive Design">
+    Mobile-first approach with responsive breakpoints
+    ```tsx
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Content */}
+    </div>
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## State Management
+
+<Tabs>
+  <Tab title="Local State">
+    React useState and useReducer for component-level state
+    ```tsx
+    const [query, setQuery] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    ```
+  </Tab>
+
+  <Tab title="Server State">
+    Custom hooks with React Query patterns for server state
+    ```tsx
+    const { data, isLoading, error } = useQuery({
+      queryKey: ['schema', databaseId],
+      queryFn: () => fetchSchema(databaseId)
+    });
+    ```
+  </Tab>
+
+{' '}
+
+<Tab title="Global State">
+  Redux Toolkit for complex application state ```tsx const dispatch =
+  useAppDispatch(); const {(user, isAuthenticated)} = useAppSelector(state =>
+  state.auth); ```
+</Tab>
+
+  <Tab title="Form State">
+    React Hook Form with Zod validation
+    ```tsx
+    const form = useForm<FormData>({
+      resolver: zodResolver(schema),
+      defaultValues: { question: '' }
+    });
+    ```
+  </Tab>
+</Tabs>
+
+## Getting Started
+
+<Steps>
+  <Step title="Install Dependencies">
+    ```bash
+    cd apps/web-frontend
+    npm install
+    ```
+  </Step>
+
+{' '}
+
+<Step title="Start Development Server">```bash npm run dev ```</Step>
+
+{' '}
+
+<Step title="Import Components">
+  ```tsx import {QueryEditor} from '@/components/query/QueryEditor'; import{' '}
+  {Button} from '@/components/ui/button'; ```
+</Step>
+
+  <Step title="Use in Your App">
+    ```tsx
+    function App() {
+      return (
+        <div className="container mx-auto p-6">
+          <QueryEditor onSubmit={handleSubmit} />
+        </div>
+      );
+    }
+    ```
+  </Step>
+</Steps>
+
+## Component Categories
+
+<CardGroup cols={3}>
+  <Card title="Query Components" icon="search" href="/components/query-editor">
+    Components for SQL query generation and editing
+  </Card>
+  <Card title="Result Components" icon="table" href="/components/result-viewer">
+    Components for displaying query results
+  </Card>
+  <Card
+    title="Schema Components"
+    icon="database"
+    href="/components/schema-browser"
+  >
+    Components for browsing database schemas
+  </Card>
+  <Card
+    title="Chat Components"
+    icon="message-circle"
+    href="/components/chat-interface"
+  >
+    Components for conversational interfaces
+  </Card>
+  <Card title="Form Components" icon="form-input" href="/components/ui/form">
+    Form inputs and validation components
+  </Card>
+  <Card title="Layout Components" icon="layout" href="/components/ui/layout">
+    Layout and navigation components
+  </Card>
+</CardGroup>
+
+## Best Practices
+
+<Note>
+  **Accessibility**: All components follow WCAG guidelines and include proper
+  ARIA attributes
+</Note>
+
+<Tip>
+  **Performance**: Use React.memo and useMemo for expensive computations and
+  frequent re-renders
+</Tip>
+
+<Warning>
+  **Type Safety**: Always define proper TypeScript interfaces for component
+  props
+</Warning>

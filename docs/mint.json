@@ -1,0 +1,166 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "SamvadQL",
+  "logo": {
+    "dark": "/logo/dark.svg",
+    "light": "/logo/light.svg"
+  },
+  "favicon": "/favicon.svg",
+  "colors": {
+    "primary": "#2e8555",
+    "light": "#33925d",
+    "dark": "#205d3b",
+    "anchors": {
+      "from": "#2e8555",
+      "to": "#4caf50"
+    }
+  },
+  "topbarLinks": [
+    {
+      "name": "Support",
+      "url": "mailto:support@samvadql.com"
+    }
+  ],
+  "topbarCtaButton": {
+    "name": "Dashboard",
+    "url": "https://dashboard.samvadql.com"
+  },
+  "tabs": [
+    {
+      "name": "API Reference",
+      "url": "api-reference"
+    },
+    {
+      "name": "Components",
+      "url": "components"
+    }
+  ],
+  "anchors": [
+    {
+      "name": "Documentation",
+      "icon": "book-open-cover",
+      "url": "https://docs.samvadql.com"
+    },
+    {
+      "name": "Community",
+      "icon": "slack",
+      "url": "https://samvadql.slack.com"
+    },
+    {
+      "name": "Blog",
+      "icon": "newspaper",
+      "url": "https://blog.samvadql.com"
+    }
+  ],
+  "navigation": [
+    {
+      "group": "Get Started",
+      "pages": ["introduction", "quickstart", "installation"]
+    },
+    {
+      "group": "Architecture",
+      "pages": [
+        "architecture/overview",
+        "architecture/backend",
+        "architecture/frontend",
+        "architecture/database"
+      ]
+    },
+    {
+      "group": "Features",
+      "pages": [
+        "features/text-to-sql",
+        "features/streaming",
+        "features/schema-selection",
+        "features/multi-database",
+        "features/validation"
+      ]
+    },
+    {
+      "group": "Development",
+      "pages": [
+        "development/setup",
+        "development/backend-dev",
+        "development/frontend-dev",
+        "development/testing",
+        "development/deployment"
+      ]
+    },
+    {
+      "group": "API Documentation",
+      "pages": [
+        "api-reference/introduction",
+        "api-reference/authentication",
+        "api-reference/errors"
+      ]
+    },
+    {
+      "group": "Query Endpoints",
+      "pages": [
+        "api-reference/query/generate",
+        "api-reference/query/execute",
+        "api-reference/query/history"
+      ]
+    },
+    {
+      "group": "Schema Endpoints",
+      "pages": [
+        "api-reference/schema/get-schema",
+        "api-reference/schema/search",
+        "api-reference/schema/table-info"
+      ]
+    },
+    {
+      "group": "WebSocket",
+      "pages": [
+        "api-reference/websocket/connection",
+        "api-reference/websocket/streaming"
+      ]
+    },
+    {
+      "group": "UI Components",
+      "pages": [
+        "components/overview",
+        "components/query-editor",
+        "components/result-viewer",
+        "components/schema-browser",
+        "components/chat-interface"
+      ]
+    },
+    {
+      "group": "Hooks",
+      "pages": [
+        "components/hooks/use-query",
+        "components/hooks/use-websocket",
+        "components/hooks/use-schema"
+      ]
+    },
+    {
+      "group": "Services",
+      "pages": [
+        "components/services/api-client",
+        "components/services/websocket-client"
+      ]
+    }
+  ],
+  "footerSocials": {
+    "x": "https://x.com/samvadql",
+    "github": "https://github.com/your-org/samvadql",
+    "linkedin": "https://www.linkedin.com/company/samvadql"
+  },
+  "feedback": {
+    "thumbsRating": true,
+    "suggestEdit": true,
+    "raiseIssue": true
+  },
+  "search": {
+    "prompt": "Search SamvadQL documentation..."
+  },
+  "api": {
+    "baseUrl": "http://localhost:8000/api/v1",
+    "auth": {
+      "method": "bearer"
+    }
+  },
+  "openapi": "/openapi.json"
+}

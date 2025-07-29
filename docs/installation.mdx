@@ -1,0 +1,366 @@
+---
+title: 'Installation'
+description: 'Complete installation guide for SamvadQL'
+---
+
+## Prerequisites
+
+Before installing SamvadQL, ensure you have the following:
+
+<CardGroup cols={2}>
+  <Card title="Docker & Docker Compose" icon="docker">
+    Recommended for development and production
+  </Card>
+  <Card title="Node.js 18+" icon="node-js">
+    For frontend development
+  </Card>
+  <Card title="Python 3.11+" icon="python">
+    For backend development
+  </Card>
+  <Card title="Database" icon="database">
+    PostgreSQL 15+ (or MySQL, Snowflake, BigQuery)
+  </Card>
+</CardGroup>
+
+## Quick Start with Docker
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/your-org/samvadql.git
+    cd samvadql
+    ```
+  </Step>
+
+  <Step title="Copy environment configuration">
+    ```bash
+    cp .env.example .env
+    ```
+
+    <Accordion title="Environment Variables">
+      ```bash
+      # Database Configuration
+      DATABASE_URL=postgresql://user:password@localhost:5432/samvadql
+      REDIS_URL=redis://localhost:6379/0
+
+      # LLM Configuration
+      OPENAI_API_KEY=your-openai-api-key
+      ANTHROPIC_API_KEY=your-anthropic-api-key
+
+      # Vector Database
+      QDRANT_URL=http://localhost:6333
+      QDRANT_API_KEY=your-qdrant-api-key
+
+      # Application Settings
+      SECRET_KEY=your-secret-key-here
+      DEBUG=true
+      CORS_ORIGINS=http://localhost:3000
+
+      # Frontend Configuration
+      NEXT_PUBLIC_API_URL=http://localhost:8000
+      NEXT_PUBLIC_WS_URL=ws://localhost:8000
+      ```
+    </Accordion>
+
+  </Step>
+
+{' '}
+
+<Step title="Start all services">```bash docker-compose up -d ```</Step>
+
+  <Step title="Access the application">
+    <CardGroup cols={3}>
+      <Card title="Frontend" href="http://localhost:3000">
+        Main application interface
+      </Card>
+      <Card title="Backend API" href="http://localhost:8000">
+        REST API endpoints
+      </Card>
+      <Card title="API Docs" href="http://localhost:8000/docs">
+        Interactive API documentation
+      </Card>
+    </CardGroup>
+  </Step>
+</Steps>
+
+## Manual Installation
+
+If you prefer to run services individually:
+
+<Tabs>
+  <Tab title="Backend Setup">
+    <Steps>
+      <Step title="Navigate to backend directory">
+        ```bash
+        cd apps/api-backend
+        ```
+      </Step>
+
+      <Step title="Create virtual environment">
+        ```bash
+        python -m venv .venv
+
+        # Activate (Linux/Mac)
+        source .venv/bin/activate
+
+        # Activate (Windows)
+        .venv\Scripts\activate
+        ```
+      </Step>
+
+      <Step title="Install dependencies">
+        ```bash
+        pip install -r requirements.txt
+        ```
+      </Step>
+
+      <Step title="Set up database">
+        ```bash
+        # Make sure PostgreSQL is running
+        python migrations/cli.py up
+        ```
+      </Step>
+
+      <Step title="Start the backend server">
+        ```bash
+        uvicorn main:app --reload --host 0.0.0.0 --port 8000
+        ```
+      </Step>
+    </Steps>
+
+  </Tab>
+
+  <Tab title="Frontend Setup">
+    <Steps>
+      <Step title="Navigate to frontend directory">
+        ```bash
+        cd apps/web-frontend
+        ```
+      </Step>
+
+      <Step title="Install dependencies">
+        ```bash
+        pnpm install
+        # or: npm install
+        ```
+      </Step>
+
+      <Step title="Start development server">
+        ```bash
+        pnpm dev
+        # or: npm run dev
+        ```
+      </Step>
+    </Steps>
+
+  </Tab>
+
+  <Tab title="Background Services">
+    <Steps>
+      <Step title="Start Redis">
+        ```bash
+        redis-server
+        ```
+      </Step>
+
+      <Step title="Start Celery worker">
+        ```bash
+        cd apps/api-backend
+        celery -A worker worker --loglevel=info
+        ```
+      </Step>
+
+      <Step title="Start Vector Database">
+        ```bash
+        # Qdrant
+        docker run -p 6333:6333 qdrant/qdrant
+
+        # Or OpenSearch
+        docker run -p 9200:9200 -e "discovery.type=single-node" opensearchproject/opensearch:2.11.0
+        ```
+      </Step>
+    </Steps>
+
+  </Tab>
+</Tabs>
+
+## Database Configuration
+
+SamvadQL supports multiple database types:
+
+<Tabs>
+  <Tab title="PostgreSQL">
+    ```bash
+    # Install PostgreSQL
+    # Ubuntu/Debian
+    sudo apt-get install postgresql postgresql-contrib
+
+    # macOS
+    brew install postgresql
+
+    # Create database
+    createdb samvadql
+
+    # Environment variable
+    DATABASE_URL=postgresql://user:password@localhost:5432/samvadql
+    ```
+
+  </Tab>
+
+  <Tab title="MySQL">
+    ```bash
+    # Install MySQL
+    # Ubuntu/Debian
+    sudo apt-get install mysql-server
+
+    # macOS
+    brew install mysql
+
+    # Create database
+    mysql -u root -p -e "CREATE DATABASE samvadql;"
+
+    # Environment variable
+    DATABASE_URL=mysql://user:password@localhost:3306/samvadql
+    ```
+
+  </Tab>
+
+  <Tab title="Snowflake">
+    ```bash
+    # Install Snowflake connector
+    pip install snowflake-connector-python
+
+    # Environment variables
+    SNOWFLAKE_ACCOUNT=your-account
+    SNOWFLAKE_USER=your-username
+    SNOWFLAKE_PASSWORD=your-password
+    SNOWFLAKE_WAREHOUSE=your-warehouse
+    SNOWFLAKE_DATABASE=your-database
+    SNOWFLAKE_SCHEMA=your-schema
+    ```
+
+  </Tab>
+
+  <Tab title="BigQuery">
+    ```bash
+    # Install BigQuery client
+    pip install google-cloud-bigquery
+
+    # Set up service account
+    export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account.json"
+
+    # Environment variables
+    BIGQUERY_PROJECT_ID=your-project-id
+    BIGQUERY_DATASET_ID=your-dataset
+    ```
+
+  </Tab>
+</Tabs>
+
+## Verification
+
+After installation, verify everything is working:
+
+<Steps>
+  <Step title="Check backend health">
+    ```bash
+    curl http://localhost:8000/health
+    ```
+
+    Expected response:
+    ```json
+    {
+      "status": "healthy",
+      "timestamp": "2024-01-01T00:00:00Z",
+      "version": "1.0.0"
+    }
+    ```
+
+  </Step>
+
+{' '}
+
+<Step title="Check frontend">
+  Open [http://localhost:3000](http://localhost:3000) in your browser
+</Step>
+
+  <Step title="Test API endpoints">
+    Visit [http://localhost:8000/docs](http://localhost:8000/docs) for interactive API documentation
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Port conflicts">
+    **Problem**: Ports 3000, 8000, 5432, or 6379 are already in use
+
+    **Solution**:
+    - Change ports in `docker-compose.yml` or `.env` file
+    - Stop conflicting services: `sudo lsof -i :3000` (find process) then `kill -9 <PID>`
+
+  </Accordion>
+
+  <Accordion title="Database connection errors">
+    **Problem**: Cannot connect to database
+
+    **Solution**:
+    - Verify database is running: `docker-compose ps`
+    - Check credentials in `.env` file
+    - Run migrations: `python migrations/cli.py up`
+    - Check firewall settings
+
+  </Accordion>
+
+  <Accordion title="Frontend build errors">
+    **Problem**: Frontend fails to start or build
+
+    **Solution**:
+    - Clear node_modules: `rm -rf node_modules && npm install`
+    - Check Node.js version: `node --version` (should be 18+)
+    - Clear Next.js cache: `rm -rf .next`
+
+  </Accordion>
+
+  <Accordion title="Backend import errors">
+    **Problem**: Python import errors or missing modules
+
+    **Solution**:
+    - Activate virtual environment: `source .venv/bin/activate`
+    - Reinstall dependencies: `pip install -r requirements.txt`
+    - Check Python version: `python --version` (should be 3.11+)
+
+  </Accordion>
+</AccordionGroup>
+
+## Production Deployment
+
+For production deployment, see our [deployment guide](/development/deployment).
+
+<CardGroup cols={2}>
+  <Card
+    title="Docker Production"
+    icon="docker"
+    href="/development/deployment#docker-production"
+  >
+    Deploy with Docker Compose
+  </Card>
+  <Card
+    title="Kubernetes"
+    icon="dharmachakra"
+    href="/development/deployment#kubernetes"
+  >
+    Deploy on Kubernetes
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="play" href="/quickstart">
+    Try your first query
+  </Card>
+  <Card title="Development Setup" icon="code" href="/development/setup">
+    Set up for development
+  </Card>
+</CardGroup>

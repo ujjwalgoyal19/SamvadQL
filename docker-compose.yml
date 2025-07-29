@@ -1,51 +1,36 @@
-version: '3.8'
-
 services:
-  # Backend API
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    ports:
-      - '8000:8000'
-    environment:
-      - DATABASE_URL=postgresql://samvadql:password@postgres:5432/samvadql
-      - REDIS_URL=redis://redis:6379
-      - QDRANT_URL=http://qdrant:6333
-      - OPENSEARCH_URL=http://opensearch:9200
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
-      - LLM_MODEL=${LLM_MODEL:-gpt-4}
-      - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.1}
-      - LLM_MAX_TOKENS=${LLM_MAX_TOKENS:-2000}
-      - SECRET_KEY=${SECRET_KEY:-your-secret-key-here}
-    depends_on:
-      - postgres
-      - redis
-      - qdrant
-    volumes:
-      - ./backend:/app
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-    networks:
-      - samvadql-network
-
   # Frontend
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: ./apps/web-frontend
+      dockerfile: Dockerfile.dev
     ports:
       - '3000:3000'
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
-      - NEXT_PUBLIC_WS_URL=http://localhost:8000
+      - VITE_API_URL=http://localhost:8000
+      - VITE_WS_URL=http://localhost:8000
     depends_on:
       - backend
     volumes:
-      - ./frontend:/app
+      - ./apps/web-frontend:/app
       - /app/node_modules
-    command: npm run dev
+    networks:
+      - samvadql-network
+
+  # Documentation
+  docs:
+    build:
+      context: ./docs
+      dockerfile: Dockerfile.dev
+    ports:
+      - '3001:3000'
+    volumes:
+      - ./docs:/app
+      - ./backend:/source/backend:ro
+      - ./frontend:/source/frontend:ro
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
     networks:
       - samvadql-network
 
@@ -104,10 +89,39 @@ services:
     networks:
       - samvadql-network
 
+  # Backend API
+  backend:
+    build:
+      context: ./apps/api-backend
+      dockerfile: Dockerfile
+    ports:
+      - '8000:8000'
+    environment:
+      - DATABASE_URL=postgresql://samvadql:password@postgres:5432/samvadql
+      - REDIS_URL=redis://redis:6379
+      - QDRANT_URL=http://qdrant:6333
+      - OPENSEARCH_URL=http://opensearch:9200
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4}
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.1}
+      - LLM_MAX_TOKENS=${LLM_MAX_TOKENS:-2000}
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-here}
+    depends_on:
+      - postgres
+      - redis
+      - qdrant
+    volumes:
+      - ./apps/api-backend:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - samvadql-network
+
   # Background Job Worker
   worker:
     build:
-      context: ./backend
+      context: ./apps/api-backend
       dockerfile: Dockerfile
     environment:
       - DATABASE_URL=postgresql://samvadql:password@postgres:5432/samvadql
@@ -124,7 +138,7 @@ services:
       - redis
       - qdrant
     volumes:
-      - ./backend:/app
+      - ./apps/api-backend:/app
     command: celery -A worker worker --loglevel=info
     networks:
       - samvadql-network
@@ -132,7 +146,7 @@ services:
   # Celery Beat Scheduler
   scheduler:
     build:
-      context: ./backend
+      context: ./apps/api-backend
       dockerfile: Dockerfile
     environment:
       - DATABASE_URL=postgresql://samvadql:password@postgres:5432/samvadql
@@ -141,7 +155,7 @@ services:
       - postgres
       - redis
     volumes:
-      - ./backend:/app
+      - ./apps/api-backend:/app
     command: celery -A worker beat --loglevel=info
     networks:
       - samvadql-network

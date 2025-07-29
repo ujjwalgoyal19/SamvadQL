@@ -1,0 +1,185 @@
+---
+title: 'Quickstart'
+description: 'Get started with SamvadQL in 5 minutes'
+---
+
+## Setup your development environment
+
+Get SamvadQL up and running on your local machine in just a few minutes.
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash git clone https://github.com/your-org/samvadql.git cd samvadql ```
+  </Step>
+  <Step title="Configure environment">
+    ```bash cp .env.example .env # Edit .env with your configuration ```
+  </Step>
+  <Step title="Start with Docker">```bash docker-compose up -d ```</Step>
+  <Step title="Access the application">
+    - Frontend: [http://localhost:3000](http://localhost:3000) - Backend API:
+    [http://localhost:8000](http://localhost:8000) - API Documentation:
+    [http://localhost:8000/docs](http://localhost:8000/docs)
+  </Step>
+</Steps>
+
+## Connect a Database
+
+Before generating SQL, you need to connect a database:
+
+<Tabs>
+  <Tab title="PostgreSQL">
+    ```json
+    {
+      "name": "My PostgreSQL Database",
+      "type": "postgresql",
+      "host": "localhost",
+      "port": 5432,
+      "database": "mydb",
+      "username": "user",
+      "password": "password"
+    }
+    ```
+  </Tab>
+  <Tab title="MySQL">
+    ```json
+    {
+      "name": "My MySQL Database",
+      "type": "mysql",
+      "host": "localhost",
+      "port": 3306,
+      "database": "mydb",
+      "username": "user",
+      "password": "password"
+    }
+    ```
+  </Tab>
+  <Tab title="Snowflake">
+    ```json
+    {
+      "name": "My Snowflake Database",
+      "type": "snowflake",
+      "account": "your-account",
+      "warehouse": "your-warehouse",
+      "database": "your-database",
+      "schema": "your-schema",
+      "username": "user",
+      "password": "password"
+    }
+    ```
+  </Tab>
+  <Tab title="BigQuery">
+    ```json
+    {
+      "name": "My BigQuery Database",
+      "type": "bigquery",
+      "project_id": "your-project-id",
+      "dataset_id": "your-dataset",
+      "credentials_path": "/path/to/service-account.json"
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Your First Query
+
+Now let's generate your first SQL query:
+
+<Steps>
+  <Step title="Enter natural language question">
+    In the query editor, type: ``` Show me all users who signed up in the last
+    30 days ```
+  </Step>
+  <Step title="Generate SQL">
+    Click **"Generate SQL"** or press `Ctrl+Enter`
+  </Step>
+  <Step title="Review generated SQL">
+    Watch as SamvadQL streams the SQL generation: ```sql SELECT * FROM users
+    WHERE created_at >= CURRENT_DATE - INTERVAL '30 days' ORDER BY created_at
+    DESC; ```
+  </Step>
+  <Step title="Execute the query">
+    Click **"Execute Query"** to run it against your database
+  </Step>
+</Steps>
+
+<Note>
+  The AI provides explanations for each generated query to help you understand
+  what it does.
+</Note>
+
+## Example Queries to Try
+
+<AccordionGroup>
+  <Accordion title="Basic Queries">
+    - "Show me all products"
+    - "Count the number of orders"
+    - "Find users with email addresses containing 'gmail'"
+  </Accordion>
+
+{' '}
+<Accordion title="Aggregations">
+  - "What's the average order value by month?" - "Show me the top 10 customers
+  by total spending" - "Count orders grouped by status"
+</Accordion>
+
+{' '}
+<Accordion title="Joins">
+  - "Show me orders with customer names and email addresses" - "List products
+  with their category names" - "Find customers who haven't placed any orders"
+</Accordion>
+
+  <Accordion title="Time-based Queries">
+    - "Show sales for the last quarter"
+    - "Find orders placed yesterday"
+    - "What's the monthly revenue trend for this year?"
+  </Accordion>
+</AccordionGroup>
+
+## Refine Your Query
+
+SamvadQL supports conversational refinement:
+
+<Steps>
+  <Step title="Ask a follow-up question">
+    ``` Only show users from the United States ```
+  </Step>
+  <Step title="AI modifies the query">
+    ```sql SELECT * FROM users WHERE created_at >= CURRENT_DATE - INTERVAL '30
+    days' AND country = 'United States' ORDER BY created_at DESC; ```
+  </Step>
+</Steps>
+
+## Tips for Better Results
+
+<CardGroup cols={2}>
+  <Card title="Be Specific" icon="bullseye">
+    Instead of "Show me sales", try "Show me total sales by product category for
+    the last month"
+  </Card>
+  <Card title="Use Domain Language" icon="language">
+    Instead of "Show me the table with people", try "Show me all customers"
+  </Card>
+  <Card title="Provide Context" icon="context">
+    Instead of "Show me recent data", try "Show me orders from the last 7 days"
+  </Card>
+  <Card title="Iterate and Refine" icon="arrows-rotate">
+    Start simple and add filters in follow-up questions
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation Guide" icon="download" href="/installation">
+    Complete installation and configuration
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/architecture/overview">
+    Learn how SamvadQL works
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/introduction">
+    Integrate with your applications
+  </Card>
+  <Card title="Development" icon="wrench" href="/development/setup">
+    Contribute to SamvadQL
+  </Card>
+</CardGroup>

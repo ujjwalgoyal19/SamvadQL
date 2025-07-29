@@ -1,0 +1,25 @@
+FROM node:18-alpine
+
+# Install Mintlify CLI globally
+RUN npm install -g mint@latest
+
+WORKDIR /app
+
+# Install dependencies
+COPY package.json package-lock.json* ./
+RUN npm i
+
+# Copy source code
+COPY . .
+
+# Create volume mount points for source code watching
+VOLUME ["/app", "/app/scripts"]
+
+# Generate initial documentation
+RUN npm run generate-all-docs
+
+# Expose port
+EXPOSE 3000
+
+# Start Mintlify development server
+CMD ["sh", "-c", "npm run generate-all-docs && mintlify dev --port 3000"]

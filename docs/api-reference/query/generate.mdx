@@ -1,0 +1,223 @@
+---
+title: 'Generate SQL'
+api: 'POST /query/generate'
+description: 'Generate SQL from natural language questions'
+---
+
+<api method="POST" url="/query/generate">
+  Convert natural language questions into SQL queries using AI.
+</api>
+
+## Request Body
+
+<ParamField body="question" type="string" required>
+  Natural language question to convert to SQL
+</ParamField>
+
+<ParamField body="database_id" type="string" required>
+  Identifier of the target database
+</ParamField>
+
+<ParamField body="context" type="object">
+  Additional context for query generation
+  <Expandable title="context">
+    <ParamField body="tables" type="array">
+      Array of table names to consider
+    </ParamField>
+    <ParamField body="previous_queries" type="array">
+      Array of previous queries for context
+    </ParamField>
+    <ParamField body="schema_hints" type="object">
+      Schema-specific hints and preferences
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="options" type="object">
+  Query generation options
+  <Expandable title="options">
+    <ParamField body="explain" type="boolean" default="true">
+      Include explanation of the generated query
+    </ParamField>
+    <ParamField body="validate" type="boolean" default="true">
+      Validate the generated SQL syntax
+    </ParamField>
+    <ParamField body="optimize" type="boolean" default="false">
+      Apply query optimization suggestions
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="data">
+    <ResponseField name="sql" type="string">
+      Generated SQL query
+    </ResponseField>
+    <ResponseField name="explanation" type="string">
+      Human-readable explanation of the query
+    </ResponseField>
+    <ResponseField name="confidence" type="number">
+      Confidence score between 0 and 1
+    </ResponseField>
+    <ResponseField name="tables_used" type="array">
+      Array of table names used in the query
+    </ResponseField>
+    <ResponseField name="estimated_rows" type="number">
+      Estimated number of rows the query will return
+    </ResponseField>
+    <ResponseField name="warnings" type="array">
+      Array of warning messages about the query
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl -X POST "http://localhost:8000/api/v1/query/generate" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-jwt-token" \
+  -d '{
+    "question": "Show me all users who signed up in the last 30 days",
+    "database_id": "my-database",
+    "context": {
+      "tables": ["users", "signups"],
+      "previous_queries": []
+    },
+    "options": {
+      "explain": true,
+      "validate": true
+    }
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('/api/v1/query/generate', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Bearer ' + token
+  },
+  body: JSON.stringify({
+    question: 'Show me all users who signed up in the last 30 days',
+    database_id: 'my-database',
+    context: {
+      tables: ['users', 'signups']
+    },
+    options: {
+      explain: true,
+      validate: true
+    }
+  })
+});
+```
+
+```python Python
+import requests
+
+response = requests.post(
+  'http://localhost:8000/api/v1/query/generate',
+  headers={
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer your-jwt-token'
+  },
+  json={
+    'question': 'Show me all users who signed up in the last 30 days',
+    'database_id': 'my-database',
+    'context': {
+      'tables': ['users', 'signups']
+    },
+    'options': {
+      'explain': True,
+      'validate': True
+    }
+  }
+)
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Success Response
+{
+  "success": true,
+  "data": {
+    "sql": "SELECT * FROM users WHERE created_at >= CURRENT_DATE - INTERVAL '30 days' ORDER BY created_at DESC;",
+    "explanation": "This query retrieves all users who have a created_at timestamp within the last 30 days. The results are ordered by creation date in descending order (newest first).",
+    "confidence": 0.95,
+    "tables_used": ["users"],
+    "estimated_rows": 150,
+    "warnings": []
+  },
+  "timestamp": "2024-01-01T00:00:00Z"
+}
+```
+
+```json Error Response
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Unable to identify relevant tables for the question",
+    "details": {
+      "question": "Show me all users who signed up in the last 30 days",
+      "available_tables": ["products", "orders"],
+      "suggestions": ["Try asking about products or orders instead"]
+    }
+  },
+  "timestamp": "2024-01-01T00:00:00Z"
+}
+```
+
+</ResponseExample>
+
+## Streaming Support
+
+For real-time query generation, use the WebSocket endpoint:
+
+```javascript
+const socket = io('ws://localhost:8000/ws');
+
+socket.emit('generate_sql', {
+  question: 'Show me all users who signed up in the last 30 days',
+  database_id: 'my-database'
+});
+
+socket.on('sql_generation', (data) => {
+  if (data.type === 'chunk') {
+    console.log('SQL chunk:', data.content);
+  } else if (data.type === 'complete') {
+    console.log('Final SQL:', data.sql);
+    console.log('Explanation:', data.explanation);
+  }
+});
+```
+
+<Note>
+  The streaming endpoint provides real-time updates as the AI generates the SQL
+  query, allowing for a more interactive user experience.
+</Note>
+
+## Best Practices
+
+<Tip>
+  **Be Specific**: Instead of "Show me sales", try "Show me total sales by
+  product category for the last month"
+</Tip>
+
+<Tip>
+  **Provide Context**: Include relevant table names in the context to improve
+  accuracy
+</Tip>
+
+<Warning>
+  **Rate Limiting**: This endpoint is rate-limited to 10 requests per minute for
+  free tier users
+</Warning>

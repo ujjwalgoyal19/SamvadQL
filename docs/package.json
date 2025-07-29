@@ -1,0 +1,29 @@
+{
+  "name": "samvadql-docs",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SamvadQL Developer Documentation with Mintlify",
+  "scripts": {
+    "dev": "mint dev",
+    "start": "mint dev",
+    "build": "mint build",
+    "preview": "mint preview",
+    "install-mintlify": "npm i -g mint",
+    "generate-api-docs": "node scripts/generate-api-docs.js",
+    "generate-component-docs": "node scripts/generate-component-docs.js",
+    "generate-all-docs": "npm run generate-api-docs && npm run generate-component-docs"
+  },
+  "dependencies": {
+    "mint": "^4.2.34"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "axios": "^1.6.0",
+    "chokidar": "^3.5.3",
+    "fs-extra": "^11.2.0",
+    "glob": "^10.3.0"
+  },
+  "engines": {
+    "node": ">=18.0"
+  }
+}

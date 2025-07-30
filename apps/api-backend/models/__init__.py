@@ -10,6 +10,7 @@ from .response import (
     TableRecommendation,
 )
 from .audit import QueryContext, UserFeedback, AuditLogEntry
+from .versioned_schema import VersionedTableSchema, SchemaChange, SchemaComparison
 
 __all__ = [
     "DatabaseType",
@@ -24,4 +25,7 @@ __all__ = [
     "QueryContext",
     "UserFeedback",
     "AuditLogEntry",
+    "VersionedTableSchema",
+    "SchemaChange",
+    "SchemaComparison",
 ]

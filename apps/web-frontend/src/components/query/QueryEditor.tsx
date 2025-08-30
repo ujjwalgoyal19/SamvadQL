@@ -3,8 +3,8 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { QueryForm, QueryEditorProps, ValidationError } from '../types';
-import { validateQueryRequest } from '../utils/validation';
+import { QueryForm, QueryEditorProps, ValidationError } from '@/types';
+import { validateQueryRequest } from '@/utils/validation';
 
 type DatabaseOption = {
   id: string;
@@ -266,5 +266,6 @@ const QueryEditor: React.FC<QueryEditorDynamicProps> = ({
     </div>
   );
 };
+// Deleted: moved to query/QueryEditor.tsx
 
 export default QueryEditor;

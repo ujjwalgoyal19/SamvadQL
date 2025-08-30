@@ -66,6 +66,7 @@ coverage/
 .next/
 out/
 storybook-static/
+.pnpm-store/
 
 # IDE/Editors
 .idea/

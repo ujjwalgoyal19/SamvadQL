@@ -15,13 +15,11 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
 
-  // React Hooks configuration
-  reactHooks.configs.recommended,
-
   // Custom configuration for your project
   {
     files: ['**/*.{js,mjs,cjs,ts,jsx,tsx}'],
     plugins: {
+      'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
     },
     languageOptions: {
@@ -31,6 +29,10 @@ export default tseslint.config(
       },
     },
     rules: {
+      // React Hooks rules
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+      // React Refresh rule
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },

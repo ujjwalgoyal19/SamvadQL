@@ -11,6 +11,16 @@ from .response import (
 )
 from .audit import QueryContext, UserFeedback, AuditLogEntry
 from .versioned_schema import VersionedTableSchema, SchemaChange, SchemaComparison
+from .vector import (
+    VectorProvider,
+    EmbeddingModel,
+    VectorDocument,
+    TableSummaryDocument,
+    QuerySummaryDocument,
+    VectorSearchResult,
+    VectorIndexConfig,
+    VectorHealthStatus,
+)
 
 __all__ = [
     "DatabaseType",
@@ -28,4 +38,12 @@ __all__ = [
     "VersionedTableSchema",
     "SchemaChange",
     "SchemaComparison",
+    "VectorProvider",
+    "EmbeddingModel",
+    "VectorDocument",
+    "TableSummaryDocument",
+    "QuerySummaryDocument",
+    "VectorSearchResult",
+    "VectorIndexConfig",
+    "VectorHealthStatus",
 ]

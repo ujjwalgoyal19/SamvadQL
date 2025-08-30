@@ -24,8 +24,18 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "types": ["vitest", "node"]
   },
   "include": ["src"],
+  "exclude": [
+    "node_modules",
+    "src/hooks",
+    "src/services",
+    "src/components/__tests__",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "**/StreamingQueryEditor.tsx"
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

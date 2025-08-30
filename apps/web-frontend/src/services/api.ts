@@ -77,15 +77,14 @@ class ApiService {
       return { data: response.data, success: true };
     } catch (error: any) {
       return {
-        error: {
-          message: error.response?.data?.message || 'Failed to submit query',
-          code: error.response?.status?.toString() || 'UNKNOWN_ERROR',
-          details: error.response?.data
-        },
-        success: false
+        data: undefined as any,
+        success: false,
+        errors: [error.response?.data?.message || 'Failed to submit query']
       };
     }
   }
+
+  // Auth endpoints
 
   async validateSql(
     sql: string,
@@ -99,11 +98,9 @@ class ApiService {
       return { data: response.data, success: true };
     } catch (error: any) {
       return {
-        error: {
-          message: error.response?.data?.message || 'Failed to validate SQL',
-          code: error.response?.status?.toString() || 'UNKNOWN_ERROR'
-        },
-        success: false
+        data: undefined as any,
+        success: false,
+        errors: [error.response?.data?.message || 'Failed to validate SQL']
       };
     }
   }
@@ -122,11 +119,9 @@ class ApiService {
       return { data: response.data, success: true };
     } catch (error: any) {
       return {
-        error: {
-          message: error.response?.data?.message || 'Failed to fetch tables',
-          code: error.response?.status?.toString() || 'UNKNOWN_ERROR'
-        },
-        success: false
+        data: undefined as any,
+        success: false,
+        errors: [error.response?.data?.message || 'Failed to fetch tables']
       };
     }
   }
@@ -144,13 +139,11 @@ class ApiService {
       return { data: response.data, success: true };
     } catch (error: any) {
       return {
-        error: {
-          message:
-            error.response?.data?.message ||
-            'Failed to get table recommendations',
-          code: error.response?.status?.toString() || 'UNKNOWN_ERROR'
-        },
-        success: false
+        data: undefined as any,
+        success: false,
+        errors: [
+          error.response?.data?.message || 'Failed to get table recommendations'
+        ]
       };
     }
   }
@@ -161,14 +154,12 @@ class ApiService {
   ): Promise<ApiResponse<void>> {
     try {
       await this.client.post('/api/v1/feedback', feedback);
-      return { success: true };
+      return { data: undefined as any, success: true };
     } catch (error: any) {
       return {
-        error: {
-          message: error.response?.data?.message || 'Failed to submit feedback',
-          code: error.response?.status?.toString() || 'UNKNOWN_ERROR'
-        },
-        success: false
+        data: undefined as any,
+        success: false,
+        errors: [error.response?.data?.message || 'Failed to submit feedback']
       };
     }
   }
@@ -180,6 +171,83 @@ class ApiService {
       return true;
     } catch {
       return false;
+    }
+  }
+
+  // Auth endpoints
+  async login(username: string, password: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await this.client.post('/api/v1/auth/login', {
+        username,
+        password
+      });
+      if (response.data?.access_token) {
+        this.setAuthToken(response.data.access_token);
+      }
+      return { data: response.data, success: true };
+    } catch (error: any) {
+      return {
+        data: undefined as any,
+        success: false,
+        errors: [error.response?.data?.detail || 'Login failed']
+      };
+    }
+  }
+
+  async signup(data: {
+    username: string;
+    email: string;
+    password: string;
+    full_name?: string;
+  }): Promise<ApiResponse<any>> {
+    try {
+      const response = await this.client.post('/api/v1/auth/signup', data);
+      if (response.data?.access_token) {
+        this.setAuthToken(response.data.access_token);
+      }
+      return { data: response.data, success: true };
+    } catch (error: any) {
+      return {
+        data: undefined as any,
+        success: false,
+        errors: [error.response?.data?.detail || 'Signup failed']
+      };
+    }
+  }
+
+  async forgotPassword(email: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await this.client.post('/api/v1/auth/forgot-password', {
+        email
+      });
+      return { data: response.data, success: true };
+    } catch (error: any) {
+      return {
+        data: undefined as any,
+        success: false,
+        errors: [
+          error.response?.data?.detail || 'Failed to initiate password reset'
+        ]
+      };
+    }
+  }
+
+  async resetPassword(
+    token: string,
+    new_password: string
+  ): Promise<ApiResponse<any>> {
+    try {
+      const response = await this.client.post('/api/v1/auth/reset-password', {
+        token,
+        new_password
+      });
+      return { data: response.data, success: true };
+    } catch (error: any) {
+      return {
+        data: undefined as any,
+        success: false,
+        errors: [error.response?.data?.detail || 'Failed to reset password']
+      };
     }
   }
 }

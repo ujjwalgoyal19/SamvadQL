@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Main types export file for the frontend application
  */

@@ -2,15 +2,13 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy package files
 COPY package.json pnpm-lock.yaml* ./
 RUN corepack enable pnpm && pnpm i
 
-# Copy source code
-COPY . .
-
 # Expose port
-EXPOSE 3000
+EXPOSE 3000 24678
+
+ENTRYPOINT ["dumb-init", "--"]
 
 # Start development server
-CMD ["pnpm", "dev"]
+CMD ["pnpm", "dev", "--", "--host", "0.0.0.0", "--port"]

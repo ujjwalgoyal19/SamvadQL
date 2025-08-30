@@ -1,50 +1,41 @@
-import { Card, CardContent } from '@/components/ui/card';
+import { useAppSelector } from '@/store/hooks';
+import QueryTab from '@/components/QueryTab';
+import TablesTab from '@/components/TablesTab';
+import HistoryTab from '@/components/HistoryTab';
 
 export default function HomePage() {
+  const { activeTab } = useAppSelector((state) => state.ui);
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'query':
+        return <QueryTab />;
+      case 'tables':
+        return <TablesTab />;
+      case 'history':
+        return <HistoryTab />;
+      default:
+        return <QueryTab />;
+    }
+  };
+
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="my-8">
-        <h1 className="text-4xl font-bold text-center mb-2">SamvadQL</h1>
-        <h3 className="text-xl text-center text-muted-foreground mb-6">
-          Text-to-SQL Conversational Interface
-        </h3>
-
-        <Card className="mt-6">
-          <CardContent className="p-6">
-            <p className="mb-4">
-              Welcome to SamvadQL, an intelligent Text-to-SQL system that
-              transforms natural language queries into precise SQL commands.
-              This application is currently under development.
+    <div className="h-full flex flex-col">
+      {/* Welcome Section - Only show on query tab */}
+      {activeTab === 'query' && (
+        <div className="border-b bg-card/50 p-6">
+          <div className="max-w-4xl mx-auto text-center">
+            <h1 className="text-3xl font-bold mb-2">Welcome to SamvadQL</h1>
+            <p className="text-muted-foreground">
+              Transform natural language questions into precise SQL queries
+              using AI
             </p>
+          </div>
+        </div>
+      )}
 
-            <h4 className="text-lg font-semibold mt-6 mb-3">
-              Features (Coming Soon):
-            </h4>
-
-            <ul className="list-disc pl-6 space-y-2">
-              <li className="text-sm">
-                Natural language to SQL conversion using advanced LLMs
-              </li>
-              <li className="text-sm">
-                Real-time streaming responses with explanations
-              </li>
-              <li className="text-sm">
-                Intelligent table and schema selection
-              </li>
-              <li className="text-sm">
-                SQL validation and optimization suggestions
-              </li>
-              <li className="text-sm">
-                Support for multiple database types (PostgreSQL, MySQL,
-                Snowflake, BigQuery)
-              </li>
-              <li className="text-sm">
-                Interactive query refinement and feedback collection
-              </li>
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Tab Content */}
+      <div className="flex-1 overflow-hidden">{renderTabContent()}</div>
     </div>
   );
 }

@@ -6,7 +6,7 @@
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    "types": ["node", "vite/client"]
+    "types": ["node", "vite/client", "vitest"]
   },
   "include": ["vite.config.ts", "*.config.*", "src/vite-env.d.ts"]
 }

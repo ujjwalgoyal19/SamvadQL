@@ -2,7 +2,7 @@
  * API service for SamvadQL frontend
  */
 
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import axios, { AxiosInstance, AxiosResponse } from "axios";
 import {
   QueryRequest,
   QueryResponse,
@@ -10,8 +10,8 @@ import {
   ValidationResult,
   UserFeedback,
   ApiResponse,
-  TableRecommendation
-} from '../types';
+  TableRecommendation,
+} from "../types";
 
 class ApiService {
   private client: AxiosInstance;
@@ -33,14 +33,14 @@ class ApiService {
   }
 
   constructor(
-    baseURL: string = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+    baseURL: string = import.meta.env.VITE_API_URL || "http://localhost:8000",
   ) {
     this.client = axios.create({
       baseURL,
       timeout: 30000,
       headers: {
-        'Content-Type': 'application/json'
-      }
+        "Content-Type": "application/json",
+      },
     });
 
     // Request interceptor for auth
@@ -59,48 +59,46 @@ class ApiService {
     this.client.interceptors.response.use(
       (response) => response,
       (error) => {
-        console.error('API Error:', error);
+        console.error("API Error:", error);
         return Promise.reject(error);
-      }
+      },
     );
   }
 
   // Query endpoints
   async submitQuery(
-    request: QueryRequest
+    request: QueryRequest,
   ): Promise<ApiResponse<QueryResponse>> {
     try {
       const response: AxiosResponse<QueryResponse> = await this.client.post(
-        '/api/v1/query',
-        request
+        "/api/v1/query",
+        request,
       );
       return { data: response.data, success: true };
     } catch (error: any) {
       return {
         data: undefined as any,
         success: false,
-        errors: [error.response?.data?.message || 'Failed to submit query']
+        errors: [error.response?.data?.message || "Failed to submit query"],
       };
     }
   }
 
-  // Auth endpoints
-
   async validateSql(
     sql: string,
-    databaseId: string
+    databaseId: string,
   ): Promise<ApiResponse<ValidationResult>> {
     try {
       const response: AxiosResponse<ValidationResult> = await this.client.post(
-        '/api/v1/validate',
-        { sql, databaseId }
+        "/api/v1/validate",
+        { sql, databaseId },
       );
       return { data: response.data, success: true };
     } catch (error: any) {
       return {
         data: undefined as any,
         success: false,
-        errors: [error.response?.data?.message || 'Failed to validate SQL']
+        errors: [error.response?.data?.message || "Failed to validate SQL"],
       };
     }
   }
@@ -108,33 +106,33 @@ class ApiService {
   // Table endpoints
   async getTables(
     databaseId: string,
-    filter?: string
+    filter?: string,
   ): Promise<ApiResponse<TableSchema[]>> {
     try {
       const params = filter ? { filter } : {};
       const response: AxiosResponse<TableSchema[]> = await this.client.get(
         `/api/v1/tables/${databaseId}`,
-        { params }
+        { params },
       );
       return { data: response.data, success: true };
     } catch (error: any) {
       return {
         data: undefined as any,
         success: false,
-        errors: [error.response?.data?.message || 'Failed to fetch tables']
+        errors: [error.response?.data?.message || "Failed to fetch tables"],
       };
     }
   }
 
   async getTableRecommendations(
     query: string,
-    databaseId: string
+    databaseId: string,
   ): Promise<ApiResponse<TableRecommendation[]>> {
     try {
       const response: AxiosResponse<TableRecommendation[]> =
-        await this.client.post('/api/v1/tables/recommend', {
+        await this.client.post("/api/v1/tables/recommend", {
           query,
-          databaseId
+          databaseId,
         });
       return { data: response.data, success: true };
     } catch (error: any) {
@@ -142,24 +140,25 @@ class ApiService {
         data: undefined as any,
         success: false,
         errors: [
-          error.response?.data?.message || 'Failed to get table recommendations'
-        ]
+          error.response?.data?.message ||
+            "Failed to get table recommendations",
+        ],
       };
     }
   }
 
   // Feedback endpoints
   async submitFeedback(
-    feedback: Omit<UserFeedback, 'id' | 'createdAt'>
+    feedback: Omit<UserFeedback, "id" | "createdAt">,
   ): Promise<ApiResponse<void>> {
     try {
-      await this.client.post('/api/v1/feedback', feedback);
+      await this.client.post("/api/v1/feedback", feedback);
       return { data: undefined as any, success: true };
     } catch (error: any) {
       return {
         data: undefined as any,
         success: false,
-        errors: [error.response?.data?.message || 'Failed to submit feedback']
+        errors: [error.response?.data?.message || "Failed to submit feedback"],
       };
     }
   }
@@ -167,7 +166,7 @@ class ApiService {
   // Health check
   async healthCheck(): Promise<boolean> {
     try {
-      await this.client.get('/health');
+      await this.client.get("/health");
       return true;
     } catch {
       return false;
@@ -177,9 +176,9 @@ class ApiService {
   // Auth endpoints
   async login(username: string, password: string): Promise<ApiResponse<any>> {
     try {
-      const response = await this.client.post('/api/v1/auth/login', {
+      const response = await this.client.post("/api/v1/auth/login", {
         username,
-        password
+        password,
       });
       if (response.data?.access_token) {
         this.setAuthToken(response.data.access_token);
@@ -189,7 +188,7 @@ class ApiService {
       return {
         data: undefined as any,
         success: false,
-        errors: [error.response?.data?.detail || 'Login failed']
+        errors: [error.response?.data?.detail || "Login failed"],
       };
     }
   }
@@ -201,7 +200,7 @@ class ApiService {
     full_name?: string;
   }): Promise<ApiResponse<any>> {
     try {
-      const response = await this.client.post('/api/v1/auth/signup', data);
+      const response = await this.client.post("/api/v1/auth/signup", data);
       if (response.data?.access_token) {
         this.setAuthToken(response.data.access_token);
       }
@@ -210,15 +209,15 @@ class ApiService {
       return {
         data: undefined as any,
         success: false,
-        errors: [error.response?.data?.detail || 'Signup failed']
+        errors: [error.response?.data?.detail || "Signup failed"],
       };
     }
   }
 
   async forgotPassword(email: string): Promise<ApiResponse<any>> {
     try {
-      const response = await this.client.post('/api/v1/auth/forgot-password', {
-        email
+      const response = await this.client.post("/api/v1/auth/forgot-password", {
+        email,
       });
       return { data: response.data, success: true };
     } catch (error: any) {
@@ -226,27 +225,8 @@ class ApiService {
         data: undefined as any,
         success: false,
         errors: [
-          error.response?.data?.detail || 'Failed to initiate password reset'
-        ]
-      };
-    }
-  }
-
-  async resetPassword(
-    token: string,
-    new_password: string
-  ): Promise<ApiResponse<any>> {
-    try {
-      const response = await this.client.post('/api/v1/auth/reset-password', {
-        token,
-        new_password
-      });
-      return { data: response.data, success: true };
-    } catch (error: any) {
-      return {
-        data: undefined as any,
-        success: false,
-        errors: [error.response?.data?.detail || 'Failed to reset password']
+          error.response?.data?.detail || "Failed to initiate password reset",
+        ],
       };
     }
   }

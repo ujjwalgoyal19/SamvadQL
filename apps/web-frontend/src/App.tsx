@@ -1,11 +1,11 @@
-import { Routes, Route } from 'react-router';
-import Layout from '@/components/Layout';
-import HomePage from './pages/HomePage';
-import SignIn from '@/pages/signin';
-import SignUpPage from '@/pages/signup';
-import ForgotPasswordPage from '@/pages/forgot-password';
-import ResetPasswordPage from '@/pages/reset-password';
-import { UserProvider, useUser } from './context/UserContext';
+import { Routes, Route } from "react-router";
+import Layout from "@/components/layout/Layout";
+import HomePage from "./pages/HomePage";
+import SignIn from "@/pages/signin";
+import SignUpPage from "@/pages/signup";
+import ForgotPasswordPage from "@/pages/forgot-password";
+import ResetPasswordPage from "@/pages/reset-password";
+import { UserProvider, useUser } from "./context/UserContext";
 
 function AppContent() {
   const { state } = useUser();

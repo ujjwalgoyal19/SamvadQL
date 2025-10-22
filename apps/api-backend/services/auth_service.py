@@ -4,35 +4,41 @@ Authentication service for SamvadQL.
 
 import secrets
 from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
 
-from jose import JWTError, jwt
-from passlib.context import CryptContext
-from fastapi import HTTPException, status
-
 from core.config import settings
+from fastapi import HTTPException, status
+from jose import JWTError, jwt
 from models.auth import (
-    User,
-    UserCreate,
-    UserUpdate,
-    UserResponse,
-    Role,
-    TokenData,
-    Token,
-    RefreshToken,
     APIToken,
     Permission,
-    ResourceType,
+    RefreshToken,
     ResourcePermission,
+    ResourceType,
+    Role,
+    Token,
+    TokenData,
+    User,
+    UserCreate,
+    UserResponse,
+    UserUpdate,
 )
+from passlib.context import CryptContext
 
 
 class AuthService:
     """Authentication and authorization service."""
 
     def __init__(self):
-        self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        # Use Argon2 as the primary password hashing scheme to avoid bcrypt's
+        # 72-byte password length limit and for stronger modern hashing.
+        # Keep bcrypt as a fallback for compatibility with existing hashes.
+        self.pwd_context = CryptContext(
+            schemes=["argon2", "bcrypt"],
+            default="argon2",
+            deprecated="auto",
+        )
         self.secret_key = settings.secret_key
         self.algorithm = settings.algorithm
         self.access_token_expire_minutes = settings.access_token_expire_minutes
@@ -103,7 +109,9 @@ class AuthService:
             user_id = UUID(user_id_str)
             username: str = payload.get("username")
             permissions: List[str] = payload.get("permissions", [])
-            resource_permissions: Optional[Dict[str, List[Dict[str, Any]]]] = payload.get("resource_permissions")
+            resource_permissions: Optional[Dict[str, List[Dict[str, Any]]]] = (
+                payload.get("resource_permissions")
+            )
             exp_timestamp: int = payload.get("exp")
             iat_timestamp: int = payload.get("iat")
             jti: str = payload.get("jti")
@@ -217,7 +225,12 @@ class AuthService:
 
         return list(permissions)
 
-    def create_tokens(self, user: User, permissions: List[str], resource_permissions: Optional[Dict[str, List[Dict[str, Any]]]] = None) -> Token:
+    def create_tokens(
+        self,
+        user: User,
+        permissions: List[str],
+        resource_permissions: Optional[Dict[str, List[Dict[str, Any]]]] = None,
+    ) -> Token:
         """Create both access and refresh tokens for a user."""
         access_token = self.create_access_token(user, permissions, resource_permissions)
         refresh_token = self.create_refresh_token(user.id)
@@ -303,9 +316,9 @@ class AuthService:
         - Conditional permissions
         """
         from repositories.auth_repository import (
+            PermissionHierarchyRepository,
             ResourcePermissionRepository,
             RoleResourcePermissionRepository,
-            PermissionHierarchyRepository,
         )
 
         # Superusers have all permissions
@@ -366,9 +379,9 @@ class AuthService:
         Returns structured permission map by resource type.
         """
         from repositories.auth_repository import (
+            PermissionHierarchyRepository,
             ResourcePermissionRepository,
             RoleResourcePermissionRepository,
-            PermissionHierarchyRepository,
         )
 
         resource_perm_repo = ResourcePermissionRepository()
@@ -381,7 +394,9 @@ class AuthService:
         # Get role-based permissions
         role_perms = []
         for role in roles:
-            role_perms.extend(await role_perm_repo.get_role_resource_permissions(role.id))
+            role_perms.extend(
+                await role_perm_repo.get_role_resource_permissions(role.id)
+            )
 
         # Organize by resource type
         permissions_map: Dict[str, List[Dict[str, Any]]] = {
@@ -400,7 +415,11 @@ class AuthService:
 
             # Check if resource already in map
             existing = next(
-                (p for p in permissions_map[resource_key] if p["id"] == perm.resource_id),
+                (
+                    p
+                    for p in permissions_map[resource_key]
+                    if p["id"] == perm.resource_id
+                ),
                 None,
             )
             if existing:
@@ -418,7 +437,11 @@ class AuthService:
                 permissions_map[resource_key] = []
 
             existing = next(
-                (p for p in permissions_map[resource_key] if p["id"] == perm.resource_id),
+                (
+                    p
+                    for p in permissions_map[resource_key]
+                    if p["id"] == perm.resource_id
+                ),
                 None,
             )
             if existing:
@@ -450,7 +473,9 @@ class AuthService:
                 continue
 
             # For each resource of this type, check for inherited permissions
-            for resource in list(resources):  # Use list() to avoid modification during iteration
+            for resource in list(
+                resources
+            ):  # Use list() to avoid modification during iteration
                 resource_id = resource["id"]
 
                 try:
@@ -462,8 +487,13 @@ class AuthService:
 
                     # Merge inherited permissions into existing resource permissions
                     for inherited_perm in inherited_perms:
-                        if inherited_perm.permission.value not in resource["permissions"]:
-                            resource["permissions"].append(inherited_perm.permission.value)
+                        if (
+                            inherited_perm.permission.value
+                            not in resource["permissions"]
+                        ):
+                            resource["permissions"].append(
+                                inherited_perm.permission.value
+                            )
 
                 except Exception as e:
                     # Log error but continue processing other resources
@@ -473,7 +503,11 @@ class AuthService:
         return permissions_map
 
     async def resolve_permission_hierarchy(
-        self, resource_type: ResourceType, resource_id: str, user_id: UUID, roles: List[Role]
+        self,
+        resource_type: ResourceType,
+        resource_id: str,
+        user_id: UUID,
+        roles: List[Role],
     ) -> List[str]:
         """
         Resolve permissions considering hierarchy (e.g., database permission implies table permissions).
@@ -484,7 +518,9 @@ class AuthService:
         hierarchy_repo = PermissionHierarchyRepository()
 
         # Get inherited permissions
-        inherited = await hierarchy_repo.get_inherited_permissions(resource_type, resource_id, user_id)
+        inherited = await hierarchy_repo.get_inherited_permissions(
+            resource_type, resource_id, user_id
+        )
 
         return [perm.permission.value for perm in inherited]
 

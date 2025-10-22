@@ -20,11 +20,12 @@ COPY . .
 
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash app \
-    && chown -R app:app /app
+    && chown -R app:app /app \
+    && pip install debugpy --upgrade -t /tmp 
 USER app
 
 # Expose port
 EXPOSE 8000
 
 # Default command
-CMD ["sh", "-c", "pip install debugpy -t /tmp && python /tmp/debugpy --wait-for-client --listen 0.0.0.0:5679 -m uvicorn main:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", "python /tmp/debugpy --wait-for-client --listen 0.0.0.0:5679 -m uvicorn main:app --host 0.0.0.0 --port 8000"]

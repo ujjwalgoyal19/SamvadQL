@@ -1,21 +1,21 @@
-import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState } from '../../store';
-import { toggleSidebar } from '../../store/slices/uiSlice';
-import { useUser } from '../../context/UserContext';
-import { apiService } from '@/services/api';
+import { apiService } from "@/services/api";
 import {
-  LayoutDashboard,
-  Search,
-  Table,
   History,
-  Settings,
-  Menu,
-  X,
+  Home,
   LogOut,
-  User
-} from 'lucide-react';
+  Menu,
+  Search,
+  Settings,
+  Table,
+  User,
+  X,
+} from "lucide-react";
+import React from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useUser } from "../../context/UserContext";
+import { RootState } from "../../store";
+import { toggleSidebar } from "../../store/slices/uiSlice";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -29,11 +29,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const { sidebarOpen } = useSelector((state: RootState) => state.ui);
 
   const navItems = [
-    { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/query', label: 'Query', icon: Search },
-    { path: '/tables', label: 'Tables', icon: Table },
-    { path: '/history', label: 'History', icon: History },
-    { path: '/settings', label: 'Settings', icon: Settings }
+    { path: "/", label: "Home", icon: Home },
+    { path: "/query", label: "Query", icon: Search },
+    { path: "/tables", label: "Tables", icon: Table },
+    { path: "/history", label: "History", icon: History },
+    { path: "/settings", label: "Settings", icon: Settings },
   ];
 
   const handleLogout = () => {
@@ -41,10 +41,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     apiService.clearAuthToken();
 
     // Clear user state
-    userDispatch({ type: 'SIGNOUT' });
+    userDispatch({ type: "SIGNOUT" });
 
     // Redirect to signin page
-    navigate('/signin');
+    navigate("/signin");
   };
 
   const handleToggleSidebar = () => {
@@ -59,7 +59,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border
           transform transition-transform duration-200 ease-in-out
           lg:translate-x-0 lg:static lg:inset-0
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
         `}
       >
         {/* Logo */}
@@ -94,8 +94,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   transition-colors duration-150
                   ${
                     isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   }
                 `}
                 onClick={() => {

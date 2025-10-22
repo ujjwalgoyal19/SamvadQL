@@ -12,13 +12,23 @@ SamvadQL is an open-source Text-to-SQL conversational interface that enables use
 - **Query Optimization**: Performance suggestions and optimization recommendations
 - **Interactive Refinement**: Edit and refine generated queries conversationally
 - **Audit & Compliance**: Complete audit logging and governance features
+- **Authentication & Authorization**: JWT-based authentication with ABAC (Attribute-Based Access Control)
+- **Resource-Level Permissions**: Fine-grained access control at database, table, and column levels
+- **Role-Based Access**: Flexible role management with permission inheritance
 
 ## Architecture
 
 The system follows a microservices architecture with:
 
-- **Frontend**: React/Next.js with TypeScript and Material-UI
+- **Frontend**: React with TypeScript, Vite, and Tailwind CSS
+  - Separate layouts for authentication and app pages
+  - Side navigation for authenticated users
+  - Redux for UI state management
+  - WebSocket for real-time streaming
 - **Backend**: FastAPI with Python, async/await support
+  - JWT-based authentication
+  - ABAC (Attribute-Based Access Control) for resource-level permissions
+  - Role-based access control with permission inheritance
 - **Vector Database**: Qdrant or OpenSearch for semantic search
 - **Cache Layer**: Redis for performance optimization
 - **Database Support**: Multiple database connectors
@@ -118,6 +128,173 @@ Key configuration options:
 ### Database Setup
 
 The system automatically initializes the database schema on startup. See `scripts/init-db.sql` for the complete schema.
+
+## Authentication & Authorization
+
+SamvadQL implements a comprehensive ABAC (Attribute-Based Access Control) system for fine-grained access control.
+
+### Resource Types
+
+- **database**: Database-level access control
+- **table**: Table-level access control
+- **column**: Column-level access control
+- **query**: Query-level access control
+- **api**: API endpoint access control
+
+### Permission Types
+
+- **read**: View and query resources
+- **write**: Modify existing resources
+- **delete**: Remove resources
+- **execute**: Execute queries or operations
+- **admin**: Full administrative access
+
+### Resource ID Convention
+
+Resource IDs follow a consistent, hierarchical format:
+
+| Resource Type | Format                               | Example                     | Description                |
+| ------------- | ------------------------------------ | --------------------------- | -------------------------- |
+| **Database**  | `database_id`                        | `postgres_prod`             | Unique database identifier |
+| **Table**     | `database_id:table_name`             | `postgres_prod:users`       | Database + table name      |
+| **Column**    | `database_id:table_name:column_name` | `postgres_prod:users:email` | Database + table + column  |
+| **Query**     | `<uuid>`                             | `123e4567-...`              | UUID for saved queries     |
+| **API**       | `/path/to/endpoint`                  | `/api/v1/query/submit`      | API endpoint path          |
+
+**Helper Functions** (in `apps/api-backend/utils/resource_ids.py`):
+
+```python
+from utils.resource_ids import (
+    format_table_resource_id,
+    parse_table_resource_id,
+    format_column_resource_id,
+    parse_column_resource_id,
+    validate_resource_id
+)
+
+# Format resource IDs
+table_id = format_table_resource_id("postgres_prod", "users")
+# Returns: "postgres_prod:users"
+
+column_id = format_column_resource_id("postgres_prod", "users", "email")
+# Returns: "postgres_prod:users:email"
+
+# Parse resource IDs
+database_id, table_name = parse_table_resource_id("postgres_prod:users")
+database_id, table_name, column_name = parse_column_resource_id("postgres_prod:users:email")
+
+# Validate resource IDs
+validate_resource_id("postgres_prod:users", ResourceType.TABLE)
+# Raises ValueError if format is invalid
+```
+
+**Important Notes**:
+
+- Component names (database_id, table_name, column_name) **must not contain colons** (`:`)
+- Use helper functions to prevent formatting errors
+- Helper functions validate inputs and raise descriptive errors
+
+### Permission Hierarchy
+
+Permissions can be inherited from parent resources:
+
+- **Database permissions** → apply to all tables and columns within that database
+- **Table permissions** → apply to all columns within that table
+
+### Granting Permissions
+
+Permissions can be granted at user or role level:
+
+```bash
+# Grant database READ permission to a user
+POST /api/v1/permissions/users/{user_id}/grant
+{
+  "resource_type": "database",
+  "resource_id": "postgres_prod",
+  "permission": "read"
+}
+
+# Grant table WRITE permission to a role
+POST /api/v1/permissions/roles/{role_id}/grant
+{
+  "resource_type": "table",
+  "resource_id": "postgres_prod:users",
+  "permission": "write"
+}
+
+# Grant column READ permission to a user
+POST /api/v1/permissions/users/{user_id}/grant
+{
+  "resource_type": "column",
+  "resource_id": "postgres_prod:users:email",
+  "permission": "read"
+}
+```
+
+### Permission Checks
+
+All API endpoints are protected with permission checks:
+
+- `/api/v1/query` - Requires READ permission on the selected database
+- `/api/v1/tables/{database_id}` - Requires READ permission on the database
+- `/api/v1/validate` - Requires authentication
+- `/api/v1/feedback` - Requires authentication
+- `/api/v1/feedback/stats` - Requires superuser/admin privileges
+
+### Permission Management API
+
+The `/api/v1/permissions/*` endpoints allow admins to manage permissions:
+
+- `POST /api/v1/permissions/users/{user_id}/grant` - Grant permission to user
+- `DELETE /api/v1/permissions/users/{user_id}/revoke` - Revoke permission from user
+- `GET /api/v1/permissions/users/{user_id}` - Get all user permissions
+- `POST /api/v1/permissions/users/{user_id}/check` - Check if user has permission
+- `POST /api/v1/permissions/roles/{role_id}/grant` - Grant permission to role
+- `DELETE /api/v1/permissions/roles/{role_id}/revoke` - Revoke permission from role
+- `GET /api/v1/permissions/hierarchy` - Manage permission hierarchies
+- `POST /api/v1/permissions/bulk-grant` - Grant multiple permissions at once
+
+## Layout Structure
+
+The frontend uses separate layouts for different user states:
+
+### AuthLayout
+
+Used for authentication pages (signin, signup, forgot-password, reset-password):
+
+- Centered content with logo branding
+- Minimal design focused on authentication flow
+- Footer with terms, privacy, and help links
+
+### AppLayout
+
+Used for authenticated app pages with side navigation:
+
+- Persistent sidebar (collapsible on mobile)
+- Navigation items: Dashboard, Query, Tables, History, Settings
+- User profile section with logout
+- Responsive design with mobile hamburger menu
+
+## Running Migrations
+
+The ABAC system requires running database migrations:
+
+```bash
+# Run all pending migrations
+cd apps/api-backend
+python -m migrations.cli upgrade
+
+# Or with Docker
+docker-compose exec backend python -m migrations.cli upgrade
+```
+
+The ABAC migration (`20250207_create_abac_tables.sql`) creates:
+
+- `resource_permissions` - User-level resource permissions
+- `role_resource_permissions` - Role-level resource permissions
+- `permission_hierarchy` - Parent-child resource relationships
+
+After running migrations, you can grant initial permissions to users through the API or directly in the database.
 
 ## Development Status
 

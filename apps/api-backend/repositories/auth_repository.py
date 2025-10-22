@@ -21,6 +21,11 @@ from models.auth import (
     UserRole,
     RefreshToken,
     APIToken,
+    ResourceType,
+    ResourcePermission,
+    ResourcePermissionGrant,
+    RoleResourcePermission,
+    PermissionHierarchy,
 )
 from core.db.connection import get_db_session
 
@@ -621,3 +626,419 @@ class APITokenRepository:
             result = await session.execute(query, {"now": datetime.utcnow()})
             await session.commit()
             return result.rowcount
+
+
+class ResourcePermissionRepository:
+    """Repository for resource-level permissions."""
+
+    def __init__(self):
+        pass
+
+    async def grant_permission(
+        self,
+        user_id: UUID,
+        resource_type: ResourceType,
+        resource_id: str,
+        permission: ResourcePermission,
+        granted_by: UUID,
+        expires_at: Optional[datetime] = None,
+        conditions: Optional[Dict[str, Any]] = None,
+    ) -> ResourcePermissionGrant:
+        """Grant a resource permission to a user."""
+        async with get_db_session() as session:
+            query = text(
+                """
+                INSERT INTO resource_permissions
+                (user_id, resource_type, resource_id, permission, granted_by, expires_at, conditions)
+                VALUES (:user_id, :resource_type, :resource_id, :permission, :granted_by, :expires_at, :conditions)
+                ON CONFLICT (user_id, resource_type, resource_id, permission)
+                DO UPDATE SET expires_at = :expires_at, conditions = :conditions, updated_at = CURRENT_TIMESTAMP
+                RETURNING id, user_id, resource_type, resource_id, permission, granted_by,
+                         granted_at, expires_at, conditions, created_at, updated_at
+            """
+            )
+
+            result = await session.execute(
+                query,
+                {
+                    "user_id": user_id,
+                    "resource_type": resource_type.value,
+                    "resource_id": resource_id,
+                    "permission": permission.value,
+                    "granted_by": granted_by,
+                    "expires_at": expires_at,
+                    "conditions": conditions,
+                },
+            )
+            await session.commit()
+            row = result.fetchone()
+            return ResourcePermissionGrant(**dict(row._mapping))
+
+    async def revoke_permission(
+        self, user_id: UUID, resource_type: ResourceType, resource_id: str, permission: ResourcePermission
+    ) -> bool:
+        """Revoke a resource permission from a user."""
+        async with get_db_session() as session:
+            query = text(
+                """
+                DELETE FROM resource_permissions
+                WHERE user_id = :user_id AND resource_type = :resource_type
+                AND resource_id = :resource_id AND permission = :permission
+            """
+            )
+
+            result = await session.execute(
+                query,
+                {
+                    "user_id": user_id,
+                    "resource_type": resource_type.value,
+                    "resource_id": resource_id,
+                    "permission": permission.value,
+                },
+            )
+            await session.commit()
+            return result.rowcount > 0
+
+    async def get_user_resource_permissions(
+        self, user_id: UUID, resource_type: Optional[ResourceType] = None, resource_id: Optional[str] = None
+    ) -> List[ResourcePermissionGrant]:
+        """Get all permissions for a user on specific resource(s)."""
+        async with get_db_session() as session:
+            conditions = ["user_id = :user_id", "(expires_at IS NULL OR expires_at > :now)"]
+            params = {"user_id": user_id, "now": datetime.utcnow()}
+
+            if resource_type:
+                conditions.append("resource_type = :resource_type")
+                params["resource_type"] = resource_type.value
+
+            if resource_id:
+                conditions.append("resource_id = :resource_id")
+                params["resource_id"] = resource_id
+
+            query = text(
+                f"""
+                SELECT id, user_id, resource_type, resource_id, permission, granted_by,
+                       granted_at, expires_at, conditions, created_at, updated_at
+                FROM resource_permissions
+                WHERE {" AND ".join(conditions)}
+                ORDER BY created_at DESC
+            """
+            )
+
+            result = await session.execute(query, params)
+            rows = result.fetchall()
+            return [ResourcePermissionGrant(**dict(row._mapping)) for row in rows]
+
+    async def get_all_user_permissions(self, user_id: UUID) -> List[ResourcePermissionGrant]:
+        """Get all resource permissions for a user."""
+        return await self.get_user_resource_permissions(user_id)
+
+    async def check_permission(
+        self, user_id: UUID, resource_type: ResourceType, resource_id: str, permission: ResourcePermission
+    ) -> bool:
+        """Check if user has a specific permission on a resource."""
+        async with get_db_session() as session:
+            query = text(
+                """
+                SELECT COUNT(*) as count
+                FROM resource_permissions
+                WHERE user_id = :user_id AND resource_type = :resource_type
+                AND resource_id = :resource_id AND permission = :permission
+                AND (expires_at IS NULL OR expires_at > :now)
+            """
+            )
+
+            result = await session.execute(
+                query,
+                {
+                    "user_id": user_id,
+                    "resource_type": resource_type.value,
+                    "resource_id": resource_id,
+                    "permission": permission.value,
+                    "now": datetime.utcnow(),
+                },
+            )
+            row = result.fetchone()
+            return row[0] > 0
+
+    async def list_users_with_permission(
+        self, resource_type: ResourceType, resource_id: str, permission: ResourcePermission
+    ) -> List[UUID]:
+        """List all users with a specific permission on a resource."""
+        async with get_db_session() as session:
+            query = text(
+                """
+                SELECT DISTINCT user_id
+                FROM resource_permissions
+                WHERE resource_type = :resource_type AND resource_id = :resource_id
+                AND permission = :permission
+                AND (expires_at IS NULL OR expires_at > :now)
+            """
+            )
+
+            result = await session.execute(
+                query,
+                {
+                    "resource_type": resource_type.value,
+                    "resource_id": resource_id,
+                    "permission": permission.value,
+                    "now": datetime.utcnow(),
+                },
+            )
+            rows = result.fetchall()
+            return [row[0] for row in rows]
+
+
+class RoleResourcePermissionRepository:
+    """Repository for role-level resource permissions."""
+
+    def __init__(self):
+        pass
+
+    async def grant_role_permission(
+        self,
+        role_id: UUID,
+        resource_type: ResourceType,
+        resource_id: str,
+        permission: ResourcePermission,
+        granted_by: UUID,
+    ) -> RoleResourcePermission:
+        """Grant a resource permission to a role."""
+        async with get_db_session() as session:
+            query = text(
+                """
+                INSERT INTO role_resource_permissions
+                (role_id, resource_type, resource_id, permission, granted_by)
+                VALUES (:role_id, :resource_type, :resource_id, :permission, :granted_by)
+                ON CONFLICT (role_id, resource_type, resource_id, permission)
+                DO UPDATE SET updated_at = CURRENT_TIMESTAMP
+                RETURNING id, role_id, resource_type, resource_id, permission, granted_by,
+                         granted_at, created_at, updated_at
+            """
+            )
+
+            result = await session.execute(
+                query,
+                {
+                    "role_id": role_id,
+                    "resource_type": resource_type.value,
+                    "resource_id": resource_id,
+                    "permission": permission.value,
+                    "granted_by": granted_by,
+                },
+            )
+            await session.commit()
+            row = result.fetchone()
+            return RoleResourcePermission(**dict(row._mapping))
+
+    async def revoke_role_permission(
+        self, role_id: UUID, resource_type: ResourceType, resource_id: str, permission: ResourcePermission
+    ) -> bool:
+        """Revoke a resource permission from a role."""
+        async with get_db_session() as session:
+            query = text(
+                """
+                DELETE FROM role_resource_permissions
+                WHERE role_id = :role_id AND resource_type = :resource_type
+                AND resource_id = :resource_id AND permission = :permission
+            """
+            )
+
+            result = await session.execute(
+                query,
+                {
+                    "role_id": role_id,
+                    "resource_type": resource_type.value,
+                    "resource_id": resource_id,
+                    "permission": permission.value,
+                },
+            )
+            await session.commit()
+            return result.rowcount > 0
+
+    async def get_role_resource_permissions(self, role_id: UUID) -> List[RoleResourcePermission]:
+        """Get all resource permissions for a role."""
+        async with get_db_session() as session:
+            query = text(
+                """
+                SELECT id, role_id, resource_type, resource_id, permission, granted_by,
+                       granted_at, created_at, updated_at
+                FROM role_resource_permissions
+                WHERE role_id = :role_id
+                ORDER BY created_at DESC
+            """
+            )
+
+            result = await session.execute(query, {"role_id": role_id})
+            rows = result.fetchall()
+            return [RoleResourcePermission(**dict(row._mapping)) for row in rows]
+
+    async def list_roles_with_permission(
+        self, resource_type: ResourceType, resource_id: str, permission: ResourcePermission
+    ) -> List[UUID]:
+        """List all roles with a specific permission on a resource."""
+        async with get_db_session() as session:
+            query = text(
+                """
+                SELECT DISTINCT role_id
+                FROM role_resource_permissions
+                WHERE resource_type = :resource_type AND resource_id = :resource_id
+                AND permission = :permission
+            """
+            )
+
+            result = await session.execute(
+                query,
+                {
+                    "resource_type": resource_type.value,
+                    "resource_id": resource_id,
+                    "permission": permission.value,
+                },
+            )
+            rows = result.fetchall()
+            return [row[0] for row in rows]
+
+    async def get_inherited_role_permissions(
+        self, role_ids: List[UUID], child_type: ResourceType, child_id: str
+    ) -> List[RoleResourcePermission]:
+        """
+        Get inherited role permissions from parent resources.
+
+        Joins role_resource_permissions with permission_hierarchy to find permissions
+        granted to roles on parent resources that should be inherited by child resources.
+
+        Args:
+            role_ids: List of role IDs to check permissions for
+            child_type: Resource type of the child resource
+            child_id: Resource ID of the child resource
+
+        Returns:
+            List of RoleResourcePermission objects inherited from parent resources
+        """
+        if not role_ids:
+            return []
+
+        async with get_db_session() as session:
+            # Build parameterized query for role_ids
+            role_params = {f"role_id_{i}": role_id for i, role_id in enumerate(role_ids)}
+            role_placeholders = ", ".join([f":role_id_{i}" for i in range(len(role_ids))])
+
+            query = text(
+                f"""
+                SELECT DISTINCT rrp.id, rrp.role_id, rrp.resource_type, rrp.resource_id,
+                       rrp.permission, rrp.granted_by, rrp.granted_at, rrp.created_at, rrp.updated_at
+                FROM role_resource_permissions rrp
+                JOIN permission_hierarchy ph ON rrp.resource_type = ph.parent_resource_type
+                    AND rrp.resource_id = ph.parent_resource_id
+                WHERE ph.child_resource_type = :child_type
+                AND ph.child_resource_id = :child_id
+                AND ph.inherit_permissions = true
+                AND rrp.role_id IN ({role_placeholders})
+                ORDER BY rrp.created_at DESC
+            """
+            )
+
+            params = {
+                "child_type": child_type.value,
+                "child_id": child_id,
+                **role_params,
+            }
+
+            result = await session.execute(query, params)
+            rows = result.fetchall()
+            return [RoleResourcePermission(**dict(row._mapping)) for row in rows]
+
+
+class PermissionHierarchyRepository:
+    """Repository for permission hierarchy management."""
+
+    def __init__(self):
+        pass
+
+    async def create_hierarchy(
+        self,
+        parent_type: ResourceType,
+        parent_id: str,
+        child_type: ResourceType,
+        child_id: str,
+        inherit: bool = True,
+    ) -> PermissionHierarchy:
+        """Create a parent-child resource relationship."""
+        async with get_db_session() as session:
+            query = text(
+                """
+                INSERT INTO permission_hierarchy
+                (parent_resource_type, parent_resource_id, child_resource_type, child_resource_id, inherit_permissions)
+                VALUES (:parent_type, :parent_id, :child_type, :child_id, :inherit)
+                ON CONFLICT (parent_resource_type, parent_resource_id, child_resource_type, child_resource_id)
+                DO UPDATE SET inherit_permissions = :inherit, updated_at = CURRENT_TIMESTAMP
+                RETURNING id, parent_resource_type, parent_resource_id, child_resource_type, child_resource_id,
+                         inherit_permissions, created_at, updated_at
+            """
+            )
+
+            result = await session.execute(
+                query,
+                {
+                    "parent_type": parent_type.value,
+                    "parent_id": parent_id,
+                    "child_type": child_type.value,
+                    "child_id": child_id,
+                    "inherit": inherit,
+                },
+            )
+            await session.commit()
+            row = result.fetchone()
+            return PermissionHierarchy(**dict(row._mapping))
+
+    async def get_inherited_permissions(
+        self, resource_type: ResourceType, resource_id: str, user_id: UUID
+    ) -> List[ResourcePermissionGrant]:
+        """Resolve inherited permissions from parent resources."""
+        async with get_db_session() as session:
+            query = text(
+                """
+                SELECT DISTINCT rp.id, rp.user_id, rp.resource_type, rp.resource_id, rp.permission,
+                       rp.granted_by, rp.granted_at, rp.expires_at, rp.conditions, rp.created_at, rp.updated_at
+                FROM resource_permissions rp
+                JOIN permission_hierarchy ph ON rp.resource_type = ph.parent_resource_type
+                    AND rp.resource_id = ph.parent_resource_id
+                WHERE ph.child_resource_type = :resource_type
+                AND ph.child_resource_id = :resource_id
+                AND ph.inherit_permissions = true
+                AND rp.user_id = :user_id
+                AND (rp.expires_at IS NULL OR rp.expires_at > :now)
+            """
+            )
+
+            result = await session.execute(
+                query,
+                {
+                    "resource_type": resource_type.value,
+                    "resource_id": resource_id,
+                    "user_id": user_id,
+                    "now": datetime.utcnow(),
+                },
+            )
+            rows = result.fetchall()
+            return [ResourcePermissionGrant(**dict(row._mapping)) for row in rows]
+
+    async def get_children(self, resource_type: ResourceType, resource_id: str) -> List[PermissionHierarchy]:
+        """Get all child resources."""
+        async with get_db_session() as session:
+            query = text(
+                """
+                SELECT id, parent_resource_type, parent_resource_id, child_resource_type, child_resource_id,
+                       inherit_permissions, created_at, updated_at
+                FROM permission_hierarchy
+                WHERE parent_resource_type = :resource_type AND parent_resource_id = :resource_id
+                ORDER BY created_at DESC
+            """
+            )
+
+            result = await session.execute(
+                query, {"resource_type": resource_type.value, "resource_id": resource_id}
+            )
+            rows = result.fetchall()
+            return [PermissionHierarchy(**dict(row._mapping)) for row in rows]
+

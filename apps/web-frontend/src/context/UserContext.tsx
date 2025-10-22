@@ -1,10 +1,21 @@
 import React, { createContext, useReducer, useContext, ReactNode } from 'react';
 
+export interface ResourcePermissions {
+  databases: Array<{ id: string; permissions: string[] }>;
+  tables: Array<{ id: string; permissions: string[] }>;
+  columns?: Array<{ id: string; permissions: string[] }>;
+  queries?: Array<{ id: string; permissions: string[] }>;
+  apis?: Array<{ id: string; permissions: string[] }>;
+}
+
 export interface User {
   id: string;
   email: string;
   name?: string;
   token?: string;
+  roles?: string[];
+  permissions?: string[];
+  resourcePermissions?: ResourcePermissions;
 }
 
 export interface UserState {
@@ -63,4 +74,37 @@ export function useUser() {
   const context = useContext(UserContext);
   if (!context) throw new Error('useUser must be used within UserProvider');
   return context;
+}
+
+// Helper functions for permission checks
+
+export function hasPermission(user: User | null, permission: string): boolean {
+  if (!user) return false;
+  return user.permissions?.includes(permission) || false;
+}
+
+export function hasResourcePermission(
+  user: User | null,
+  resourceType: keyof ResourcePermissions,
+  resourceId: string,
+  permission: string
+): boolean {
+  if (!user || !user.resourcePermissions) return false;
+
+  const resources = user.resourcePermissions[resourceType];
+  if (!resources) return false;
+
+  const resource = resources.find((r) => r.id === resourceId);
+  return resource?.permissions.includes(permission) || false;
+}
+
+export function canAccessDatabase(
+  user: User | null,
+  databaseId: string
+): boolean {
+  return hasResourcePermission(user, 'databases', databaseId, 'read');
+}
+
+export function canAccessTable(user: User | null, tableId: string): boolean {
+  return hasResourcePermission(user, 'tables', tableId, 'read');
 }

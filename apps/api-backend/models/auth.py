@@ -45,6 +45,26 @@ class Permission(str, Enum):
     ADMIN_ALL = "*"
 
 
+class ResourceType(str, Enum):
+    """Resource types for ABAC."""
+
+    DATABASE = "database"
+    TABLE = "table"
+    COLUMN = "column"
+    QUERY = "query"
+    API = "api"
+
+
+class ResourcePermission(str, Enum):
+    """Resource-level permissions for ABAC."""
+
+    READ = "read"
+    WRITE = "write"
+    DELETE = "delete"
+    EXECUTE = "execute"
+    ADMIN = "admin"
+
+
 class User(BaseModel):
     """User model."""
 
@@ -145,6 +165,8 @@ class UserResponse(BaseModel):
     updated_at: datetime
     last_login: Optional[datetime] = None
     roles: List[str] = Field(default_factory=list)
+    permissions: List[str] = Field(default_factory=list)
+    resource_permissions: Optional[Dict[str, List[Dict[str, Any]]]] = None
 
     class Config:
         from_attributes = True
@@ -236,6 +258,7 @@ class TokenData(BaseModel):
     user_id: UUID
     username: str
     permissions: List[str] = Field(default_factory=list)
+    resource_permissions: Optional[Dict[str, List[Dict[str, Any]]]] = None
     exp: datetime
     iat: datetime
     jti: str  # JWT ID
@@ -328,3 +351,107 @@ class RefreshToken(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ABAC (Attribute-Based Access Control) Models
+
+
+class ResourcePermissionGrant(BaseModel):
+    """Resource permission grant model."""
+
+    id: UUID = Field(default_factory=uuid4)
+    user_id: UUID
+    resource_type: ResourceType
+    resource_id: str = Field(..., min_length=1, max_length=255)
+    permission: ResourcePermission
+    granted_by: UUID
+    granted_at: datetime = Field(default_factory=datetime.utcnow)
+    expires_at: Optional[datetime] = None
+    conditions: Optional[Dict[str, Any]] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+    class Config:
+        from_attributes = True
+
+
+class RoleResourcePermission(BaseModel):
+    """Role resource permission model."""
+
+    id: UUID = Field(default_factory=uuid4)
+    role_id: UUID
+    resource_type: ResourceType
+    resource_id: str = Field(..., min_length=1, max_length=255)
+    permission: ResourcePermission
+    granted_by: UUID
+    granted_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+    class Config:
+        from_attributes = True
+
+
+class PermissionHierarchy(BaseModel):
+    """Permission hierarchy model for parent-child resource relationships."""
+
+    id: UUID = Field(default_factory=uuid4)
+    parent_resource_type: ResourceType
+    parent_resource_id: str = Field(..., min_length=1, max_length=255)
+    child_resource_type: ResourceType
+    child_resource_id: str = Field(..., min_length=1, max_length=255)
+    inherit_permissions: bool = True
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+    class Config:
+        from_attributes = True
+
+
+class ResourcePermissionCreate(BaseModel):
+    """Resource permission creation model."""
+
+    user_id: UUID
+    resource_type: ResourceType
+    resource_id: str = Field(..., min_length=1, max_length=255)
+    permission: ResourcePermission
+    expires_at: Optional[datetime] = None
+    conditions: Optional[Dict[str, Any]] = None
+
+
+class ResourcePermissionResponse(BaseModel):
+    """Resource permission response model."""
+
+    id: UUID
+    user_id: UUID
+    resource_type: ResourceType
+    resource_id: str
+    permission: ResourcePermission
+    granted_by: UUID
+    granted_at: datetime
+    expires_at: Optional[datetime] = None
+    conditions: Optional[Dict[str, Any]] = None
+
+    class Config:
+        from_attributes = True
+
+
+class PermissionCheckRequest(BaseModel):
+    """Permission check request model."""
+
+    user_id: UUID
+    resource_type: ResourceType
+    resource_id: str = Field(..., min_length=1, max_length=255)
+    permission: ResourcePermission
+
+
+class PermissionCheckResponse(BaseModel):
+    """Permission check response model."""
+
+    has_permission: bool
+    permission: ResourcePermission
+    resource_type: ResourceType
+    resource_id: str
+    reason: Optional[str] = None
+    granted_through: Optional[str] = None  # 'direct', 'role', 'inherited', 'superuser'
+

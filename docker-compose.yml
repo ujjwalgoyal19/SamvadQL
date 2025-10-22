@@ -107,6 +107,7 @@ services:
       dockerfile: Dockerfile
     ports:
       - '8000:8000'
+      - '5679:5679' # For WebSocket connections
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
       interval: 30s
@@ -114,6 +115,7 @@ services:
       retries: 3
       start_period: 10s
     environment:
+      - DEBUG_MODE=debug
       - DATABASE_URL=postgresql://samvadql:password@postgres:5432/samvadql
       - REDIS_URL=redis://redis:6379
       - QDRANT_URL=http://qdrant:6333
@@ -131,7 +133,12 @@ services:
       - qdrant
     volumes:
       - ./apps/api-backend:/app
-    command: ['uvicorn', 'main:app', '--host', '0.0.0.0', '--port', '8000']
+    command:
+      [
+        'sh',
+        '-c',
+        'pip install debugpy -t /tmp && python /tmp/debugpy --wait-for-client --listen 0.0.0.0:5679 -m uvicorn main:app --host 0.0.0.0 --port 8000'
+      ]
     networks:
       - samvadql-network
 

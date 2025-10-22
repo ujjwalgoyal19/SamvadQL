@@ -36,6 +36,7 @@ class AuthResponse(BaseModel):
     refresh_token: str
     token_type: str
     expires_in: int
+    resource_permissions: Optional[dict] = None
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -74,8 +75,11 @@ async def signup(request: SignupRequest):
         roles = [role]
     else:
         roles = []
+
     permissions = auth_service.get_user_permissions(roles)
-    tokens: Token = auth_service.create_tokens(user, permissions)
+    resource_permissions = await auth_service.get_user_resource_permissions(user.id, roles)
+
+    tokens: Token = auth_service.create_tokens(user, permissions, resource_permissions)
     response_user = UserResponse(
         id=user.id,
         username=user.username,
@@ -87,6 +91,8 @@ async def signup(request: SignupRequest):
         updated_at=user.updated_at,
         last_login=user.last_login,
         roles=[r.name for r in roles],
+        permissions=permissions,
+        resource_permissions=resource_permissions,
     )
     return AuthResponse(
         user=response_user,
@@ -94,6 +100,7 @@ async def signup(request: SignupRequest):
         refresh_token=tokens.refresh_token,
         token_type="bearer",
         expires_in=tokens.expires_in,
+        resource_permissions=resource_permissions,
     )
 
 
@@ -113,7 +120,9 @@ async def login(request: LoginRequest):
     await user_repo.update_last_login(user.id)
     roles = await user_role_repo.get_user_roles(user.id)
     permissions = auth_service.get_user_permissions(roles)
-    tokens = auth_service.create_tokens(user, permissions)
+    resource_permissions = await auth_service.get_user_resource_permissions(user.id, roles)
+
+    tokens = auth_service.create_tokens(user, permissions, resource_permissions)
     response_user = UserResponse(
         id=user.id,
         username=user.username,
@@ -125,6 +134,8 @@ async def login(request: LoginRequest):
         updated_at=user.updated_at,
         last_login=user.last_login,
         roles=[r.name for r in roles],
+        permissions=permissions,
+        resource_permissions=resource_permissions,
     )
     return AuthResponse(
         user=response_user,
@@ -132,6 +143,7 @@ async def login(request: LoginRequest):
         refresh_token=tokens.refresh_token,
         token_type="bearer",
         expires_in=tokens.expires_in,
+        resource_permissions=resource_permissions,
     )
 
 

@@ -31,61 +31,59 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-md p-8 bg-background rounded-lg shadow-md flex flex-col gap-6"
-      >
-        <div className="text-center flex flex-col gap-2">
-          <h1 className="text-2xl font-bold">Reset Password</h1>
-          <p className="text-sm text-muted-foreground">
-            Paste the reset token you received and set a new password.
-          </p>
+    <form
+      onSubmit={handleSubmit}
+      className="w-full p-8 bg-background rounded-lg shadow-md flex flex-col gap-6"
+    >
+      <div className="text-center flex flex-col gap-2">
+        <h1 className="text-2xl font-bold">Reset Password</h1>
+        <p className="text-sm text-muted-foreground">
+          Paste the reset token you received and set a new password.
+        </p>
+      </div>
+      <div className="grid gap-4">
+        <div className="grid gap-2">
+          <Label htmlFor="token">Reset Token</Label>
+          <Input
+            id="token"
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            required
+            placeholder="Paste reset token"
+          />
         </div>
-        <div className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="token">Reset Token</Label>
-            <Input
-              id="token"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              required
-              placeholder="Paste reset token"
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="password">New Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="confirm">Confirm Password</Label>
-            <Input
-              id="confirm"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-            />
-          </div>
-          {error && <p className="text-sm text-red-500">{error}</p>}
-          {message && <p className="text-sm text-green-600">{message}</p>}
-          <Button type="submit" disabled={loading}>
-            {loading ? 'Resetting...' : 'Reset Password'}
-          </Button>
-          <p className="text-center text-sm">
-            Remembered?{' '}
-            <a href="/signin" className="underline">
-              Sign in
-            </a>
-          </p>
+        <div className="grid gap-2">
+          <Label htmlFor="password">New Password</Label>
+          <Input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
         </div>
-      </form>
-    </div>
+        <div className="grid gap-2">
+          <Label htmlFor="confirm">Confirm Password</Label>
+          <Input
+            id="confirm"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+          />
+        </div>
+        {error && <p className="text-sm text-red-500">{error}</p>}
+        {message && <p className="text-sm text-green-600">{message}</p>}
+        <Button type="submit" disabled={loading}>
+          {loading ? 'Resetting...' : 'Reset Password'}
+        </Button>
+        <p className="text-center text-sm">
+          Remembered?{' '}
+          <a href="/signin" className="underline">
+            Sign in
+          </a>
+        </p>
+      </div>
+    </form>
   );
 }

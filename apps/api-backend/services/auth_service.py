@@ -23,6 +23,8 @@ from models.auth import (
     RefreshToken,
     APIToken,
     Permission,
+    ResourceType,
+    ResourcePermission,
 )
 
 
@@ -47,6 +49,7 @@ class AuthService:
         self,
         user: User,
         permissions: List[str],
+        resource_permissions: Optional[Dict[str, List[Dict[str, Any]]]] = None,
         expires_delta: Optional[timedelta] = None,
     ) -> str:
         """Create a JWT access token."""
@@ -65,6 +68,10 @@ class AuthService:
             "iat": datetime.utcnow(),
             "jti": str(uuid4()),
         }
+
+        # Add resource permissions to token if provided (be mindful of token size)
+        if resource_permissions:
+            to_encode["resource_permissions"] = resource_permissions
 
         encoded_jwt = jwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
         return encoded_jwt
@@ -96,6 +103,7 @@ class AuthService:
             user_id = UUID(user_id_str)
             username: str = payload.get("username")
             permissions: List[str] = payload.get("permissions", [])
+            resource_permissions: Optional[Dict[str, List[Dict[str, Any]]]] = payload.get("resource_permissions")
             exp_timestamp: int = payload.get("exp")
             iat_timestamp: int = payload.get("iat")
             jti: str = payload.get("jti")
@@ -114,6 +122,7 @@ class AuthService:
                 user_id=user_id,
                 username=username,
                 permissions=permissions,
+                resource_permissions=resource_permissions,
                 exp=exp,
                 iat=iat,
                 jti=jti,
@@ -208,9 +217,9 @@ class AuthService:
 
         return list(permissions)
 
-    def create_tokens(self, user: User, permissions: List[str]) -> Token:
+    def create_tokens(self, user: User, permissions: List[str], resource_permissions: Optional[Dict[str, List[Dict[str, Any]]]] = None) -> Token:
         """Create both access and refresh tokens for a user."""
-        access_token = self.create_access_token(user, permissions)
+        access_token = self.create_access_token(user, permissions, resource_permissions)
         refresh_token = self.create_refresh_token(user.id)
 
         return Token(
@@ -271,6 +280,238 @@ class AuthService:
             "strength": strength,
             "score": score,
             "issues": issues,
+        }
+
+    # ABAC (Attribute-Based Access Control) Methods
+
+    async def check_resource_permission(
+        self,
+        user_id: UUID,
+        resource_type: ResourceType,
+        resource_id: str,
+        required_permission: ResourcePermission,
+        roles: List[Role],
+        is_superuser: bool = False,
+    ) -> bool:
+        """
+        Comprehensive permission check considering:
+        - Superuser status
+        - Direct user resource permissions
+        - Role-based resource permissions
+        - Inherited permissions from parent resources (user-level)
+        - Inherited permissions from parent resources (role-level)
+        - Conditional permissions
+        """
+        from repositories.auth_repository import (
+            ResourcePermissionRepository,
+            RoleResourcePermissionRepository,
+            PermissionHierarchyRepository,
+        )
+
+        # Superusers have all permissions
+        if is_superuser:
+            return True
+
+        resource_perm_repo = ResourcePermissionRepository()
+        role_perm_repo = RoleResourcePermissionRepository()
+        hierarchy_repo = PermissionHierarchyRepository()
+
+        # Check direct user permissions
+        has_direct = await resource_perm_repo.check_permission(
+            user_id, resource_type, resource_id, required_permission
+        )
+        if has_direct:
+            return True
+
+        # Check role-based permissions (direct on resource)
+        for role in roles:
+            role_perms = await role_perm_repo.get_role_resource_permissions(role.id)
+            for perm in role_perms:
+                if (
+                    perm.resource_type == resource_type
+                    and perm.resource_id == resource_id
+                    and perm.permission == required_permission
+                ):
+                    return True
+
+        # Check inherited permissions from parent resources (user-level)
+        inherited_perms = await hierarchy_repo.get_inherited_permissions(
+            resource_type, resource_id, user_id
+        )
+        for perm in inherited_perms:
+            if perm.permission == required_permission:
+                # TODO: Evaluate conditions if present
+                return True
+
+        # Check inherited permissions from parent resources (role-level)
+        if roles:
+            role_ids = [role.id for role in roles]
+            inherited_role_perms = await role_perm_repo.get_inherited_role_permissions(
+                role_ids, resource_type, resource_id
+            )
+            for perm in inherited_role_perms:
+                if perm.permission == required_permission:
+                    return True
+
+        return False
+
+    async def get_user_resource_permissions(
+        self, user_id: UUID, roles: List[Role]
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Aggregate all resource permissions for a user from:
+        - Direct user grants
+        - Role-based grants
+        - Inherited permissions (via permission hierarchy)
+        Returns structured permission map by resource type.
+        """
+        from repositories.auth_repository import (
+            ResourcePermissionRepository,
+            RoleResourcePermissionRepository,
+            PermissionHierarchyRepository,
+        )
+
+        resource_perm_repo = ResourcePermissionRepository()
+        role_perm_repo = RoleResourcePermissionRepository()
+        hierarchy_repo = PermissionHierarchyRepository()
+
+        # Get direct user permissions
+        user_perms = await resource_perm_repo.get_all_user_permissions(user_id)
+
+        # Get role-based permissions
+        role_perms = []
+        for role in roles:
+            role_perms.extend(await role_perm_repo.get_role_resource_permissions(role.id))
+
+        # Organize by resource type
+        permissions_map: Dict[str, List[Dict[str, Any]]] = {
+            "databases": [],
+            "tables": [],
+            "columns": [],
+            "queries": [],
+            "apis": [],
+        }
+
+        # Process user permissions
+        for perm in user_perms:
+            resource_key = f"{perm.resource_type.value}s"
+            if resource_key not in permissions_map:
+                permissions_map[resource_key] = []
+
+            # Check if resource already in map
+            existing = next(
+                (p for p in permissions_map[resource_key] if p["id"] == perm.resource_id),
+                None,
+            )
+            if existing:
+                if perm.permission.value not in existing["permissions"]:
+                    existing["permissions"].append(perm.permission.value)
+            else:
+                permissions_map[resource_key].append(
+                    {"id": perm.resource_id, "permissions": [perm.permission.value]}
+                )
+
+        # Process role permissions
+        for perm in role_perms:
+            resource_key = f"{perm.resource_type.value}s"
+            if resource_key not in permissions_map:
+                permissions_map[resource_key] = []
+
+            existing = next(
+                (p for p in permissions_map[resource_key] if p["id"] == perm.resource_id),
+                None,
+            )
+            if existing:
+                if perm.permission.value not in existing["permissions"]:
+                    existing["permissions"].append(perm.permission.value)
+            else:
+                permissions_map[resource_key].append(
+                    {"id": perm.resource_id, "permissions": [perm.permission.value]}
+                )
+
+        # Process inherited permissions for each resource type
+        # Check each resource in the map for inherited permissions from parent resources
+        for resource_type_str, resources in permissions_map.items():
+            # Convert resource type string back to enum (e.g., "tables" -> ResourceType.TABLE)
+            if not resources:
+                continue
+
+            # Map plural keys to ResourceType enum
+            resource_type_mapping = {
+                "databases": ResourceType.DATABASE,
+                "tables": ResourceType.TABLE,
+                "columns": ResourceType.COLUMN,
+                "queries": ResourceType.QUERY,
+                "apis": ResourceType.API,
+            }
+
+            resource_type_enum = resource_type_mapping.get(resource_type_str)
+            if not resource_type_enum:
+                continue
+
+            # For each resource of this type, check for inherited permissions
+            for resource in list(resources):  # Use list() to avoid modification during iteration
+                resource_id = resource["id"]
+
+                try:
+                    inherited_perms = await hierarchy_repo.get_inherited_permissions(
+                        resource_type=resource_type_enum,
+                        resource_id=resource_id,
+                        user_id=user_id,
+                    )
+
+                    # Merge inherited permissions into existing resource permissions
+                    for inherited_perm in inherited_perms:
+                        if inherited_perm.permission.value not in resource["permissions"]:
+                            resource["permissions"].append(inherited_perm.permission.value)
+
+                except Exception as e:
+                    # Log error but continue processing other resources
+                    # Don't let inheritance failures break the entire permission map
+                    pass
+
+        return permissions_map
+
+    async def resolve_permission_hierarchy(
+        self, resource_type: ResourceType, resource_id: str, user_id: UUID, roles: List[Role]
+    ) -> List[str]:
+        """
+        Resolve permissions considering hierarchy (e.g., database permission implies table permissions).
+        Returns list of effective permissions.
+        """
+        from repositories.auth_repository import PermissionHierarchyRepository
+
+        hierarchy_repo = PermissionHierarchyRepository()
+
+        # Get inherited permissions
+        inherited = await hierarchy_repo.get_inherited_permissions(resource_type, resource_id, user_id)
+
+        return [perm.permission.value for perm in inherited]
+
+    async def validate_resource_access(
+        self,
+        user_id: UUID,
+        resource_type: ResourceType,
+        resource_id: str,
+        permission: ResourcePermission,
+        roles: List[Role],
+        is_superuser: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Validate and log access attempts.
+        Returns detailed validation result.
+        """
+        has_access = await self.check_resource_permission(
+            user_id, resource_type, resource_id, permission, roles, is_superuser
+        )
+
+        return {
+            "has_access": has_access,
+            "user_id": str(user_id),
+            "resource_type": resource_type.value,
+            "resource_id": resource_id,
+            "permission": permission.value,
+            "timestamp": datetime.utcnow().isoformat(),
         }
 
 

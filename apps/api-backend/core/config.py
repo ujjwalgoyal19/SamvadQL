@@ -68,11 +68,15 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             # Handle comma-separated string
             if v.startswith("[") and v.endswith("]"):
-                # Already JSON format, let pydantic handle it
-                return v
-            else:
-                # Comma-separated string
-                return [origin.strip() for origin in v.split(",") if origin.strip()]
+                import json
+                try:
+                    parsed = json.loads(v)
+                    if isinstance(parsed, list):
+                        return parsed
+                except json.JSONDecodeError:
+                    pass
+            # Already JSON format, let pydantic handle it
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
         return v
 
     # Performance

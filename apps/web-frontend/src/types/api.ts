@@ -41,6 +41,15 @@ export interface TableSchema {
   updated_at?: string;
 }
 
+export interface TableListResponse {
+  database_id: string;
+  tables: TableSchema[];
+  total_count: number;
+  page: number;
+  page_size: number;
+  has_more: boolean;
+}
+
 export interface QueryRequest {
   query: string;
   user_id: string;
@@ -218,4 +227,58 @@ export interface StatusMessage extends WebSocketMessage {
     status: string;
     message: string;
   };
+}
+
+// Permission Management types
+
+export interface PermissionRequest {
+  resource_type: string;
+  resource_id: string;
+  permission: string;
+  expires_at?: string;
+}
+
+export interface BulkGrantRequest {
+  permissions: PermissionRequest[];
+}
+
+export interface BulkRevokeRequest {
+  permissions: Array<{
+    resource_type: string;
+    resource_id: string;
+    permission: string;
+  }>;
+}
+
+export interface BulkPermissionResponse {
+  success: boolean;
+  granted: number;
+  failed: number;
+  results: any[];
+  errors: Array<{
+    resource_type: string;
+    resource_id: string;
+    permission: string;
+    error: string;
+  }>;
+}
+
+export interface HierarchyRequest {
+  parent_resource_type: string;
+  parent_resource_id: string;
+  child_resource_type: string;
+  child_resource_id: string;
+  inherit_permissions?: boolean;
+}
+
+export interface HierarchyResponse {
+  success: boolean;
+  message: string;
+  hierarchy: any;
+}
+
+export interface PermissionHierarchy {
+  resource_type: string;
+  resource_id: string;
+  children: any[];
 }

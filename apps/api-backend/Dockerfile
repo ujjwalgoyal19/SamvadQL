@@ -27,4 +27,4 @@ USER app
 EXPOSE 8000
 
 # Default command
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "pip install debugpy -t /tmp && python /tmp/debugpy --wait-for-client --listen 0.0.0.0:5679 -m uvicorn main:app --host 0.0.0.0 --port 8000"]

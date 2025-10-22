@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router';
 import { apiService } from '@/services/api';
 import { useUser } from '@/context/UserContext';
 
@@ -11,6 +12,8 @@ export function SignupForm({
   ...props
 }: React.ComponentProps<'form'>) {
   const { dispatch } = useUser();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -40,9 +43,16 @@ export function SignupForm({
           id: data.user.id,
           email: data.user.email,
           name: data.user.full_name,
-          token: data.access_token
+          token: data.access_token,
+          roles: data.user.roles || [],
+          permissions: data.user.permissions || [],
+          resourcePermissions:
+            data.resource_permissions || data.user.resource_permissions
         }
       });
+      // Redirect to the original path or default to home
+      const from = (location.state as any)?.from?.pathname || '/';
+      navigate(from, { replace: true });
     } else {
       setError(res.errors?.[0] || 'Signup failed');
     }

@@ -258,3 +258,49 @@ export type DeepPartial<T> = {
 export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 
 export type RequiredFields<T, K extends keyof T> = T & Required<Pick<T, K>>;
+
+// ABAC (Attribute-Based Access Control) Types
+
+export type ResourceType = 'database' | 'table' | 'column' | 'query' | 'api';
+
+export type ResourcePermission =
+  | 'read'
+  | 'write'
+  | 'delete'
+  | 'execute'
+  | 'admin';
+
+export interface ResourcePermissionGrant {
+  id: string;
+  userId: string;
+  resourceType: ResourceType;
+  resourceId: string;
+  permission: ResourcePermission;
+  grantedBy: string;
+  grantedAt: string;
+  expiresAt?: string;
+}
+
+export interface UserResourcePermissions {
+  databases: Array<{ id: string; permissions: ResourcePermission[] }>;
+  tables: Array<{ id: string; permissions: ResourcePermission[] }>;
+  columns?: Array<{ id: string; permissions: ResourcePermission[] }>;
+  queries?: Array<{ id: string; permissions: ResourcePermission[] }>;
+  apis?: Array<{ id: string; permissions: ResourcePermission[] }>;
+}
+
+export interface PermissionCheckRequest {
+  userId: string;
+  resourceType: ResourceType;
+  resourceId: string;
+  permission: ResourcePermission;
+}
+
+export interface PermissionCheckResponse {
+  hasPermission: boolean;
+  permission: ResourcePermission;
+  resourceType: ResourceType;
+  resourceId: string;
+  reason?: string;
+  grantedThrough?: 'direct' | 'role' | 'inherited' | 'superuser';
+}

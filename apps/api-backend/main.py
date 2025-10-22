@@ -11,6 +11,7 @@ import logging
 from core.config import settings
 from api.v1 import router as v1_router
 from api.auth import router as auth_router
+from api.permissions import router as permissions_router
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,7 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 # Include API routers
 app.include_router(v1_router)
 app.include_router(auth_router)
+app.include_router(permissions_router)
 
 
 # Health / readiness endpoint

@@ -22,6 +22,15 @@ from models import (
     DatabaseType,
     ValidationStatus,
 )
+from models.auth import User, ResourceType, ResourcePermission
+from api.dependencies import (
+    get_current_active_user,
+    get_current_superuser,
+    require_database_access,
+    require_table_access,
+    check_resource_access,
+)
+from utils.resource_ids import format_table_resource_id
 from services.query_generation_service import QueryGenerationService
 from services.metadata_service import MetadataExtractionService
 from repositories.user_feedback import UserFeedbackRepository
@@ -140,21 +149,53 @@ async def stream_json_response(async_generator):
 
 
 @router.post("/query", response_model=None)
-async def submit_query(request: QueryRequest):
+async def submit_query(
+    request: QueryRequest,
+    current_user: User = Depends(get_current_active_user),
+    _: User = Depends(require_database_access(ResourcePermission.READ))
+):
     """
     Submit natural language query for SQL generation with streaming support.
 
     This endpoint processes natural language queries and returns streaming SQL generation
     responses. The response includes the generated SQL, explanations, and metadata.
+
+    Requires authentication. User must have READ permission on the selected database.
+    If selected_tables are provided, user must also have READ permission on each table.
     """
     try:
         logger.info(
-            f"Processing query request from user {request.user_id}: {request.query[:100]}..."
+            f"Processing query request from user {current_user.id}: {request.query[:100]}..."
         )
 
         # Validate request
         if not request.query.strip():
             raise HTTPException(status_code=400, detail="Query cannot be empty")
+
+        # Database access permission is enforced via dependency injection
+        # User must have READ permission on request.database_id
+
+        # Check table-level READ permissions for selected tables
+        if request.selected_tables:
+            for table_name in request.selected_tables:
+                # Format table resource ID using standard convention
+                table_resource_id = format_table_resource_id(request.database_id, table_name)
+                has_table_permission = await check_resource_access(
+                    user=current_user,
+                    resource_type=ResourceType.TABLE.value,
+                    resource_id=table_resource_id,
+                    permission=ResourcePermission.READ.value,
+                )
+
+                if not has_table_permission:
+                    raise HTTPException(
+                        status_code=403,
+                        detail=f"Permission denied: READ access required for table '{table_name}' in database '{request.database_id}'",
+                    )
+
+                logger.debug(
+                    f"User {current_user.id} has READ permission for table {table_resource_id}"
+                )
 
         # Generate SQL using the query generation service
         response_generator = query_service.generate_sql(request)
@@ -180,6 +221,8 @@ async def submit_query(request: QueryRequest):
 @router.get("/tables/{database_id}", response_model=TableListResponse)
 async def get_tables(
     database_id: str,
+    current_user: User = Depends(get_current_active_user),
+    _: User = Depends(require_database_access(ResourcePermission.READ)),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(50, ge=1, le=200, description="Page size"),
     search: Optional[str] = Query(None, description="Search filter for table names"),
@@ -191,9 +234,15 @@ async def get_tables(
 
     Returns a paginated list of tables with their metadata, supporting
     search by name, filtering by tier, and tag-based filtering.
+
+    Requires authentication. User must have READ permission on the database.
+    Tables are filtered based on user's table-level READ permissions.
     """
     try:
-        logger.info(f"Fetching tables for database {database_id}, page {page}")
+        logger.info(f"Fetching tables for database {database_id}, page {page}, user {current_user.id}")
+
+        # Database access permission is enforced via dependency injection
+        # User must have READ permission on database_id
 
         # For now, we'll create a mock implementation since we need database connection config
         # In a real implementation, this would fetch from the metadata service
@@ -210,25 +259,73 @@ async def get_tables(
 
         try:
             # Get table list from metadata service
-            table_names = await metadata_service.list_tables(
+            all_table_names = await metadata_service.list_tables(
                 database_id=database_id,
                 database_type=database_type,
                 connection_config=connection_config,
                 use_cache=True,
             )
 
-            # Apply search filter
+            # Step 1: Batch-fetch all user permissions to avoid N database queries
+            from repositories.auth_repository import RoleRepository
+            from services.auth_service import auth_service
+
+            # Fetch user roles once
+            role_repo = RoleRepository()
+            user_roles = await role_repo.get_user_roles(current_user.id)
+
+            # Get all user permissions in a single batch call
+            # This includes direct permissions, role-based permissions, and inherited permissions
+            user_permissions = await auth_service.get_user_resource_permissions(
+                current_user.id, user_roles
+            )
+
+            # Build a set of accessible table resource IDs with READ permission for O(1) lookup
+            accessible_table_ids = set()
+            for table_perm in user_permissions.get("tables", []):
+                if "read" in table_perm.get("permissions", []):
+                    accessible_table_ids.add(table_perm["id"])
+
+            # Check for database-level READ permission
+            # If user has READ on the database, they should have READ on all tables via inheritance
+            database_has_read = current_user.is_superuser  # Superusers always have access
+
+            if not database_has_read:
+                for db_perm in user_permissions.get("databases", []):
+                    if db_perm["id"] == database_id and "read" in db_perm.get("permissions", []):
+                        database_has_read = True
+                        break
+
+            # Filter tables by READ permission (pure in-memory check, no DB calls)
+            accessible_table_names = []
+            for table_name in all_table_names:
+                table_resource_id = format_table_resource_id(database_id, table_name)
+
+                # User has access if:
+                # 1. They have explicit READ permission on the specific table, OR
+                # 2. They have READ permission on the parent database (cascades down), OR
+                # 3. They are a superuser
+                if table_resource_id in accessible_table_ids or database_has_read:
+                    accessible_table_names.append(table_name)
+                else:
+                    logger.debug(
+                        f"User {current_user.id} lacks READ permission for table {table_resource_id}"
+                    )
+
+            # Step 2: Apply search filter on accessible tables
+            filtered_table_names = accessible_table_names
             if search:
                 search_lower = search.lower()
-                table_names = [
-                    name for name in table_names if search_lower in name.lower()
+                filtered_table_names = [
+                    name for name in accessible_table_names if search_lower in name.lower()
                 ]
 
-            # Get detailed metadata for tables (with pagination)
+            # Step 3: Apply pagination to filtered results
             start_idx = (page - 1) * page_size
             end_idx = start_idx + page_size
-            paginated_table_names = table_names[start_idx:end_idx]
+            paginated_table_names = filtered_table_names[start_idx:end_idx]
 
+            # Step 4: Get detailed metadata and apply tier/tags filters
             tables = []
             for table_name in paginated_table_names:
                 try:
@@ -260,8 +357,8 @@ async def get_tables(
                     )
                     continue
 
-            # Calculate pagination info
-            total_count = len(table_names)
+            # Calculate pagination info based on accessible, filtered tables
+            total_count = len(filtered_table_names)
             has_more = end_idx < total_count
 
             response = TableListResponse(
@@ -294,15 +391,21 @@ async def get_tables(
 
 
 @router.post("/validate", response_model=ValidationResult)
-async def validate_sql(request: SQLValidationRequest):
+async def validate_sql(
+    request: SQLValidationRequest,
+    current_user: User = Depends(get_current_active_user),
+    _: User = Depends(require_database_access(ResourcePermission.READ))
+):
     """
     Validate SQL query for syntax and safety.
 
     Performs comprehensive SQL validation including syntax checking,
     safety analysis for destructive operations, and basic optimization suggestions.
+
+    Requires authentication. User must have READ permission on the specified database.
     """
     try:
-        logger.info(f"Validating SQL query for database {request.database_id}")
+        logger.info(f"Validating SQL query for database {request.database_id}, user {current_user.id}")
 
         # Basic SQL validation
         sql = request.sql.strip()
@@ -396,16 +499,22 @@ async def validate_sql(request: SQLValidationRequest):
 
 
 @router.post("/feedback", response_model=Dict[str, str])
-async def submit_feedback(request: FeedbackRequest, background_tasks: BackgroundTasks):
+async def submit_feedback(
+    request: FeedbackRequest,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_active_user)
+):
     """
     Submit user feedback for generated SQL queries.
 
     Collects user feedback including ratings, comments, and acceptance/rejection
     status to improve the system's performance over time.
+
+    Requires authentication.
     """
     try:
         logger.info(
-            f"Receiving feedback from user {request.user_id} for query {request.query_id}"
+            f"Receiving feedback from user {current_user.id} for query {request.query_id}"
         )
 
         # Create feedback object
@@ -448,9 +557,14 @@ async def store_feedback(feedback: UserFeedback):
 
 @router.get("/feedback/stats", response_model=Dict[str, Any])
 async def get_feedback_stats(
-    days: int = Query(30, ge=1, le=365, description="Number of days to analyze")
+    days: int = Query(30, ge=1, le=365, description="Number of days to analyze"),
+    current_user: User = Depends(get_current_superuser)
 ):
-    """Get feedback statistics for the specified time period."""
+    """
+    Get feedback statistics for the specified time period.
+
+    Requires superuser/admin privileges.
+    """
     try:
         from datetime import datetime, timedelta
 

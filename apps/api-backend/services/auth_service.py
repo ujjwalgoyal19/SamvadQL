@@ -8,21 +8,15 @@ from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
 
 from core.config import settings
-from fastapi import HTTPException, status
 from jose import JWTError, jwt
 from models.auth import (
-    APIToken,
     Permission,
-    RefreshToken,
     ResourcePermission,
     ResourceType,
     Role,
     Token,
     TokenData,
     User,
-    UserCreate,
-    UserResponse,
-    UserUpdate,
 )
 from passlib.context import CryptContext
 
@@ -31,13 +25,13 @@ class AuthService:
     """Authentication and authorization service."""
 
     def __init__(self):
-        # Use Argon2 as the primary password hashing scheme to avoid bcrypt's
+        # Use Argon2 as the password hashing scheme to avoid bcrypt's
         # 72-byte password length limit and for stronger modern hashing.
-        # Keep bcrypt as a fallback for compatibility with existing hashes.
         self.pwd_context = CryptContext(
-            schemes=["argon2", "bcrypt"],
-            default="argon2",
-            deprecated="auto",
+            schemes=["argon2"],
+            argon2__time_cost=3,
+            argon2__memory_cost_kib=131072,
+            argon2__parallelism=1,
         )
         self.secret_key = settings.secret_key
         self.algorithm = settings.algorithm
@@ -60,9 +54,9 @@ class AuthService:
     ) -> str:
         """Create a JWT access token."""
         if expires_delta:
-            expire = datetime.utcnow() + expires_delta
+            expire = datetime.now() + expires_delta
         else:
-            expire = datetime.utcnow() + timedelta(
+            expire = datetime.now() + timedelta(
                 minutes=self.access_token_expire_minutes
             )
 
@@ -71,7 +65,7 @@ class AuthService:
             "username": user.username,
             "permissions": permissions,
             "exp": expire,
-            "iat": datetime.utcnow(),
+            "iat": datetime.now(),
             "jti": str(uuid4()),
         }
 
@@ -84,13 +78,13 @@ class AuthService:
 
     def create_refresh_token(self, user_id: UUID) -> str:
         """Create a refresh token."""
-        expire = datetime.utcnow() + timedelta(days=30)  # Refresh tokens last 30 days
+        expire = datetime.now() + timedelta(days=30)  # Refresh tokens last 30 days
 
         to_encode = {
             "sub": str(user_id),
             "type": "refresh",
             "exp": expire,
-            "iat": datetime.utcnow(),
+            "iat": datetime.now(),
             "jti": str(uuid4()),
         }
 
@@ -102,28 +96,31 @@ class AuthService:
         try:
             payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
 
-            user_id_str: str = payload.get("sub")
+            user_id_str: Optional[str] = payload.get("sub")
             if user_id_str is None:
                 return None
 
             user_id = UUID(user_id_str)
-            username: str = payload.get("username")
+            username: Optional[str] = payload.get("username")
             permissions: List[str] = payload.get("permissions", [])
             resource_permissions: Optional[Dict[str, List[Dict[str, Any]]]] = (
                 payload.get("resource_permissions")
             )
-            exp_timestamp: int = payload.get("exp")
-            iat_timestamp: int = payload.get("iat")
-            jti: str = payload.get("jti")
+            exp_ts: Optional[int] = payload.get("exp")
+            iat_ts: Optional[int] = payload.get("iat")
+            jti: Optional[str] = payload.get("jti")
 
-            if not all([username, exp_timestamp, iat_timestamp, jti]):
+            if not all([username, exp_ts, iat_ts, jti]):
                 return None
 
-            exp = datetime.fromtimestamp(exp_timestamp)
-            iat = datetime.fromtimestamp(iat_timestamp)
+            if not (username and exp_ts and iat_ts and jti):
+                return None
+
+            exp = datetime.fromtimestamp(exp_ts)
+            iat = datetime.fromtimestamp(iat_ts)
 
             # Check if token is expired
-            if datetime.utcnow() > exp:
+            if datetime.now() > exp:
                 return None
 
             return TokenData(
@@ -144,11 +141,14 @@ class AuthService:
         try:
             payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
 
-            user_id_str: str = payload.get("sub")
-            token_type: str = payload.get("type")
-            exp_timestamp: int = payload.get("exp")
+            user_id_str: Optional[str] = payload.get("sub")
+            token_type: Optional[str] = payload.get("type")
+            exp_timestamp: Optional[int] = payload.get("exp")
 
             if not all([user_id_str, token_type, exp_timestamp]):
+                return None
+
+            if not (user_id_str and token_type and exp_timestamp):
                 return None
 
             if token_type != "refresh":
@@ -158,7 +158,7 @@ class AuthService:
             exp = datetime.fromtimestamp(exp_timestamp)
 
             # Check if token is expired
-            if datetime.utcnow() > exp:
+            if datetime.now() > exp:
                 return None
 
             return user_id
@@ -547,7 +547,7 @@ class AuthService:
             "resource_type": resource_type.value,
             "resource_id": resource_id,
             "permission": permission.value,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now().isoformat(),
         }
 
 

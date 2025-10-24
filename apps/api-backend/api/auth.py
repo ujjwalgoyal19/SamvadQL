@@ -77,7 +77,9 @@ async def signup(request: SignupRequest):
         roles = []
 
     permissions = auth_service.get_user_permissions(roles)
-    resource_permissions = await auth_service.get_user_resource_permissions(user.id, roles)
+    resource_permissions = await auth_service.get_user_resource_permissions(
+        user.id, roles
+    )
 
     tokens: Token = auth_service.create_tokens(user, permissions, resource_permissions)
     response_user = UserResponse(
@@ -120,7 +122,9 @@ async def login(request: LoginRequest):
     await user_repo.update_last_login(user.id)
     roles = await user_role_repo.get_user_roles(user.id)
     permissions = auth_service.get_user_permissions(roles)
-    resource_permissions = await auth_service.get_user_resource_permissions(user.id, roles)
+    resource_permissions = await auth_service.get_user_resource_permissions(
+        user.id, roles
+    )
 
     tokens = auth_service.create_tokens(user, permissions, resource_permissions)
     response_user = UserResponse(

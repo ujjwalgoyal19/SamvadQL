@@ -25,6 +25,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel, Field
+from torch import _has_compatible_shallow_copy_type
 
 from api.dependencies import get_current_superuser, get_current_active_user
 from models.auth import (
@@ -53,6 +54,7 @@ role_repo = RoleRepository()
 
 
 # Request/Response Models
+
 
 class GrantPermissionRequest(BaseModel):
     resource_type: ResourceType
@@ -90,6 +92,7 @@ class ResourcePermissionList(BaseModel):
 
 
 # User Permission Endpoints
+
 
 @router.post("/users/{user_id}/grant", status_code=status.HTTP_201_CREATED)
 async def grant_user_permission(
@@ -230,6 +233,7 @@ async def check_user_permission(
 
 # Role Permission Endpoints
 
+
 @router.post("/roles/{role_id}/grant", status_code=status.HTTP_201_CREATED)
 async def grant_role_permission(
     role_id: UUID,
@@ -299,6 +303,7 @@ async def get_role_permissions(
 
 # Resource Permission Endpoints
 
+
 @router.get("/resources/{resource_type}/{resource_id}")
 async def get_resource_permissions(
     resource_type: ResourceType,
@@ -333,6 +338,7 @@ async def get_resource_permissions(
 
 
 # Permission Hierarchy Endpoints
+
 
 @router.post("/hierarchy", status_code=status.HTTP_201_CREATED)
 async def create_permission_hierarchy(
@@ -378,6 +384,7 @@ async def get_permission_hierarchy(
 
 # Bulk Operations
 
+
 @router.post("/bulk-grant", status_code=status.HTTP_201_CREATED)
 async def bulk_grant_permissions(
     user_id: UUID,
@@ -400,12 +407,14 @@ async def bulk_grant_permissions(
             )
             results.append(ResourcePermissionResponse(**permission.dict()))
         except Exception as e:
-            errors.append({
-                "resource_type": perm_request.resource_type.value,
-                "resource_id": perm_request.resource_id,
-                "permission": perm_request.permission.value,
-                "error": str(e),
-            })
+            errors.append(
+                {
+                    "resource_type": perm_request.resource_type.value,
+                    "resource_id": perm_request.resource_id,
+                    "permission": perm_request.permission.value,
+                    "error": str(e),
+                }
+            )
 
     return {
         "success": len(errors) == 0,
@@ -435,25 +444,31 @@ async def bulk_revoke_permissions(
                 permission=perm_request.permission,
             )
             if success:
-                results.append({
-                    "resource_type": perm_request.resource_type.value,
-                    "resource_id": perm_request.resource_id,
-                    "permission": perm_request.permission.value,
-                })
+                results.append(
+                    {
+                        "resource_type": perm_request.resource_type.value,
+                        "resource_id": perm_request.resource_id,
+                        "permission": perm_request.permission.value,
+                    }
+                )
             else:
-                errors.append({
+                errors.append(
+                    {
+                        "resource_type": perm_request.resource_type.value,
+                        "resource_id": perm_request.resource_id,
+                        "permission": perm_request.permission.value,
+                        "error": "Permission not found",
+                    }
+                )
+        except Exception as e:
+            errors.append(
+                {
                     "resource_type": perm_request.resource_type.value,
                     "resource_id": perm_request.resource_id,
                     "permission": perm_request.permission.value,
-                    "error": "Permission not found",
-                })
-        except Exception as e:
-            errors.append({
-                "resource_type": perm_request.resource_type.value,
-                "resource_id": perm_request.resource_id,
-                "permission": perm_request.permission.value,
-                "error": str(e),
-            })
+                    "error": str(e),
+                }
+            )
 
     return {
         "success": len(errors) == 0,

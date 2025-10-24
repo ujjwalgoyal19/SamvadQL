@@ -2,15 +2,17 @@
 FastAPI dependencies for authentication and authorization.
 """
 
-from typing import Optional, Callable
-from uuid import UUID
+from typing import Callable
 
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from models.auth import User, ResourceType, ResourcePermission, Permission
 from services.auth_service import auth_service
-from repositories.auth_repository import UserRepository, RoleRepository
+from repositories.auth_repository import (
+    UserRepository,
+    UserRoleRepository,
+)
 
 # HTTP Bearer token scheme
 security = HTTPBearer()
@@ -75,16 +77,22 @@ def require_permission(permission: str) -> Callable:
     Factory function that returns a dependency to check if user has a specific permission.
     """
 
-    async def permission_checker(current_user: User = Depends(get_current_active_user)) -> User:
+    async def permission_checker(
+        current_user: User = Depends(get_current_active_user),
+    ) -> User:
         # Get user roles
-        role_repo = RoleRepository()
+        role_repo = UserRoleRepository()
         user_roles = await role_repo.get_user_roles(current_user.id)
 
         # Get permissions from roles
         permissions = auth_service.get_user_permissions(user_roles)
 
         # Check if user has the required permission or is superuser
-        if current_user.is_superuser or permission in permissions or Permission.ADMIN_ALL.value in permissions:
+        if (
+            current_user.is_superuser
+            or permission in permissions
+            or Permission.ADMIN_ALL.value in permissions
+        ):
             return current_user
 
         raise HTTPException(
@@ -100,8 +108,10 @@ def require_any_permission(*required_permissions: str) -> Callable:
     Factory function to check if user has any of the specified permissions.
     """
 
-    async def permission_checker(current_user: User = Depends(get_current_active_user)) -> User:
-        role_repo = RoleRepository()
+    async def permission_checker(
+        current_user: User = Depends(get_current_active_user),
+    ) -> User:
+        role_repo = UserRoleRepository()
         user_roles = await role_repo.get_user_roles(current_user.id)
         permissions = auth_service.get_user_permissions(user_roles)
 
@@ -124,8 +134,10 @@ def require_all_permissions(*required_permissions: str) -> Callable:
     Factory function to check if user has all specified permissions.
     """
 
-    async def permission_checker(current_user: User = Depends(get_current_active_user)) -> User:
-        role_repo = RoleRepository()
+    async def permission_checker(
+        current_user: User = Depends(get_current_active_user),
+    ) -> User:
+        role_repo = UserRoleRepository()
         user_roles = await role_repo.get_user_roles(current_user.id)
         permissions = auth_service.get_user_permissions(user_roles)
 
@@ -179,7 +191,7 @@ def require_resource_permission(
             )
 
         # Get user roles
-        role_repo = RoleRepository()
+        role_repo = UserRoleRepository()
         user_roles = await role_repo.get_user_roles(current_user.id)
 
         # Check resource permission
@@ -217,12 +229,14 @@ def require_table_access(
     return require_resource_permission(ResourceType.TABLE, permission, "table_id")
 
 
-async def get_user_permissions(current_user: User = Depends(get_current_active_user)) -> dict:
+async def get_user_permissions(
+    current_user: User = Depends(get_current_active_user),
+) -> dict:
     """
     Get all permissions for a user (role-based + resource-based).
     Returns a dictionary with permissions.
     """
-    role_repo = RoleRepository()
+    role_repo = UserRoleRepository()
     user_roles = await role_repo.get_user_roles(current_user.id)
 
     # Get role-based permissions
@@ -255,7 +269,7 @@ async def check_resource_access(
     except ValueError:
         return False
 
-    role_repo = RoleRepository()
+    role_repo = UserRoleRepository()
     user_roles = await role_repo.get_user_roles(user.id)
 
     return await auth_service.check_resource_permission(

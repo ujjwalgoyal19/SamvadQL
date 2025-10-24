@@ -4,7 +4,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Generic, List, Optional, TypeVar, Union
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timezone
 
 from core.db.pool import DatabaseConnectionManager
 from core.db.manager import get_database_manager
@@ -49,12 +49,12 @@ class BaseRepository(ABC, Generic[T]):
 
         # Build INSERT query
         columns = list(data.keys())
-        placeholders = [f"${i+1}" for i in range(len(columns))]
+        placeholders = [f"${i + 1}" for i in range(len(columns))]
         values = list(data.values())
 
         query = f"""
-            INSERT INTO {self.table_name} ({', '.join(columns)})
-            VALUES ({', '.join(placeholders)})
+            INSERT INTO {self.table_name} ({", ".join(columns)})
+            VALUES ({", ".join(placeholders)})
             RETURNING *
         """
 
@@ -133,15 +133,15 @@ class BaseRepository(ABC, Generic[T]):
                 row["column_name"] for row in await connection.fetch(columns_query)
             ]
         if "updated_at" in columns:
-            updates["updated_at"] = datetime.utcnow()
+            updates["updated_at"] = datetime.now(timezone.utc)
 
         # Build UPDATE query
-        set_clauses = [f"{key} = ${i+2}" for i, key in enumerate(updates.keys())]
+        set_clauses = [f"{key} = ${i + 2}" for i, key in enumerate(updates.keys())]
         values = [str(entity_id)] + list(updates.values())
 
         query = f"""
             UPDATE {self.table_name}
-            SET {', '.join(set_clauses)}
+            SET {", ".join(set_clauses)}
             WHERE id = $1
             RETURNING *
         """
@@ -214,7 +214,7 @@ class BaseRepository(ABC, Generic[T]):
             return await self.get_all(limit=limit, order_by=order_by)
 
         # Build WHERE clause
-        where_clauses = [f"{key} = ${i+1}" for i, key in enumerate(filters.keys())]
+        where_clauses = [f"{key} = ${i + 1}" for i, key in enumerate(filters.keys())]
         values = list(filters.values())
 
         query = f"SELECT * FROM {self.table_name} WHERE {' AND '.join(where_clauses)}"

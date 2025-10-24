@@ -2,19 +2,16 @@
 Authentication repositories for SamvadQL.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 from uuid import UUID
 
-import asyncpg
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.auth import (
     User,
     UserCreate,
     UserUpdate,
-    UserResponse,
     Role,
     RoleCreate,
     RoleUpdate,
@@ -120,7 +117,7 @@ class UserRepository:
         async with get_db_session() as session:
             # Build dynamic update query
             update_fields = []
-            params = {"user_id": user_id, "updated_at": datetime.utcnow()}
+            params = {"user_id": user_id, "updated_at": datetime.now(timezone.utc)}
 
             if user_data.email is not None:
                 update_fields.append("email = :email")
@@ -142,7 +139,7 @@ class UserRepository:
             query = text(
                 f"""
                 UPDATE users
-                SET {', '.join(update_fields)}
+                SET {", ".join(update_fields)}
                 WHERE id = :user_id
                 RETURNING id, username, email, hashed_password, full_name, is_active, is_superuser,
                          created_at, updated_at, last_login
@@ -172,8 +169,8 @@ class UserRepository:
                 query,
                 {
                     "user_id": user_id,
-                    "last_login": datetime.utcnow(),
-                    "updated_at": datetime.utcnow(),
+                    "last_login": datetime.now(timezone.utc),
+                    "updated_at": datetime.now(timezone.utc),
                 },
             )
             await session.commit()
@@ -279,7 +276,7 @@ class RoleRepository:
         """Update role information."""
         async with get_db_session() as session:
             update_fields = []
-            params = {"role_id": role_id, "updated_at": datetime.utcnow()}
+            params = {"role_id": role_id, "updated_at": datetime.now(timezone.utc)}
 
             if role_data.description is not None:
                 update_fields.append("description = :description")
@@ -297,7 +294,7 @@ class RoleRepository:
             query = text(
                 f"""
                 UPDATE roles
-                SET {', '.join(update_fields)}
+                SET {", ".join(update_fields)}
                 WHERE id = :role_id
                 RETURNING id, name, description, permissions, created_at, updated_at
             """
@@ -358,9 +355,10 @@ class UserRoleRepository:
             result = await session.execute(
                 query, {"user_id": user_id, "role_id": role_id}
             )
-
+            row = result.scalar_one_or_none()
             await session.commit()
-            return result.rowcount > 0
+
+            return row is not None
 
     async def get_user_role(self, user_id: UUID, role_id: UUID) -> Optional[UserRole]:
         """Get specific user-role assignment."""
@@ -472,8 +470,9 @@ class RefreshTokenRepository:
             )
 
             result = await session.execute(query, {"token": token})
+            row = result.scalar_one_or_none()
             await session.commit()
-            return result.rowcount > 0
+            return row is not None
 
     async def revoke_user_tokens(self, user_id: UUID) -> int:
         """Revoke all refresh tokens for a user."""
@@ -487,8 +486,9 @@ class RefreshTokenRepository:
             )
 
             result = await session.execute(query, {"user_id": user_id})
+            row = result.scalar_one_or_none()
             await session.commit()
-            return result.rowcount
+            return row is not None
 
     async def cleanup_expired_tokens(self) -> int:
         """Remove expired refresh tokens."""
@@ -500,9 +500,10 @@ class RefreshTokenRepository:
             """
             )
 
-            result = await session.execute(query, {"now": datetime.utcnow()})
+            result = await session.execute(query, {"now": datetime.now(timezone.utc)})
+            row = result.scalar_one_or_none()
             await session.commit()
-            return result.rowcount
+            return row is not None
 
 
 class APITokenRepository:
@@ -558,7 +559,7 @@ class APITokenRepository:
             )
 
             result = await session.execute(
-                query, {"token": token, "now": datetime.utcnow()}
+                query, {"token": token, "now": datetime.now(timezone.utc)}
             )
             row = result.fetchone()
             return APIToken(**dict(row._mapping)) if row else None
@@ -575,7 +576,7 @@ class APITokenRepository:
             )
 
             await session.execute(
-                query, {"token": token, "last_used": datetime.utcnow()}
+                query, {"token": token, "last_used": datetime.now(timezone.utc)}
             )
             await session.commit()
 
@@ -609,8 +610,9 @@ class APITokenRepository:
             result = await session.execute(
                 query, {"token_id": token_id, "user_id": user_id}
             )
+            row = result.scalar_one_or_none()
             await session.commit()
-            return result.rowcount > 0
+            return row is not None
 
     async def cleanup_expired_tokens(self) -> int:
         """Deactivate expired API tokens."""
@@ -623,9 +625,10 @@ class APITokenRepository:
             """
             )
 
-            result = await session.execute(query, {"now": datetime.utcnow()})
+            result = await session.execute(query, {"now": datetime.now(timezone.utc)})
+            row = result.scalar_one_or_none()
             await session.commit()
-            return result.rowcount
+            return row is not None
 
 
 class ResourcePermissionRepository:
@@ -672,10 +675,16 @@ class ResourcePermissionRepository:
             )
             await session.commit()
             row = result.fetchone()
+            if not row:
+                raise Exception("Failed to grant permission")
             return ResourcePermissionGrant(**dict(row._mapping))
 
     async def revoke_permission(
-        self, user_id: UUID, resource_type: ResourceType, resource_id: str, permission: ResourcePermission
+        self,
+        user_id: UUID,
+        resource_type: ResourceType,
+        resource_id: str,
+        permission: ResourcePermission,
     ) -> bool:
         """Revoke a resource permission from a user."""
         async with get_db_session() as session:
@@ -696,16 +705,23 @@ class ResourcePermissionRepository:
                     "permission": permission.value,
                 },
             )
+            row = result.scalar_one_or_none()
             await session.commit()
-            return result.rowcount > 0
+            return row is not None
 
     async def get_user_resource_permissions(
-        self, user_id: UUID, resource_type: Optional[ResourceType] = None, resource_id: Optional[str] = None
+        self,
+        user_id: UUID,
+        resource_type: Optional[ResourceType] = None,
+        resource_id: Optional[str] = None,
     ) -> List[ResourcePermissionGrant]:
         """Get all permissions for a user on specific resource(s)."""
         async with get_db_session() as session:
-            conditions = ["user_id = :user_id", "(expires_at IS NULL OR expires_at > :now)"]
-            params = {"user_id": user_id, "now": datetime.utcnow()}
+            conditions = [
+                "user_id = :user_id",
+                "(expires_at IS NULL OR expires_at > :now)",
+            ]
+            params = {"user_id": user_id, "now": datetime.now(timezone.utc)}
 
             if resource_type:
                 conditions.append("resource_type = :resource_type")
@@ -729,12 +745,18 @@ class ResourcePermissionRepository:
             rows = result.fetchall()
             return [ResourcePermissionGrant(**dict(row._mapping)) for row in rows]
 
-    async def get_all_user_permissions(self, user_id: UUID) -> List[ResourcePermissionGrant]:
+    async def get_all_user_permissions(
+        self, user_id: UUID
+    ) -> List[ResourcePermissionGrant]:
         """Get all resource permissions for a user."""
         return await self.get_user_resource_permissions(user_id)
 
     async def check_permission(
-        self, user_id: UUID, resource_type: ResourceType, resource_id: str, permission: ResourcePermission
+        self,
+        user_id: UUID,
+        resource_type: ResourceType,
+        resource_id: str,
+        permission: ResourcePermission,
     ) -> bool:
         """Check if user has a specific permission on a resource."""
         async with get_db_session() as session:
@@ -755,14 +777,19 @@ class ResourcePermissionRepository:
                     "resource_type": resource_type.value,
                     "resource_id": resource_id,
                     "permission": permission.value,
-                    "now": datetime.utcnow(),
+                    "now": datetime.now(timezone.utc),
                 },
             )
             row = result.fetchone()
+            if not row:
+                return False
             return row[0] > 0
 
     async def list_users_with_permission(
-        self, resource_type: ResourceType, resource_id: str, permission: ResourcePermission
+        self,
+        resource_type: ResourceType,
+        resource_id: str,
+        permission: ResourcePermission,
     ) -> List[UUID]:
         """List all users with a specific permission on a resource."""
         async with get_db_session() as session:
@@ -782,7 +809,7 @@ class ResourcePermissionRepository:
                     "resource_type": resource_type.value,
                     "resource_id": resource_id,
                     "permission": permission.value,
-                    "now": datetime.utcnow(),
+                    "now": datetime.now(timezone.utc),
                 },
             )
             rows = result.fetchall()
@@ -829,10 +856,16 @@ class RoleResourcePermissionRepository:
             )
             await session.commit()
             row = result.fetchone()
+            if not row:
+                raise Exception("Failed to grant role permission")
             return RoleResourcePermission(**dict(row._mapping))
 
     async def revoke_role_permission(
-        self, role_id: UUID, resource_type: ResourceType, resource_id: str, permission: ResourcePermission
+        self,
+        role_id: UUID,
+        resource_type: ResourceType,
+        resource_id: str,
+        permission: ResourcePermission,
     ) -> bool:
         """Revoke a resource permission from a role."""
         async with get_db_session() as session:
@@ -853,10 +886,13 @@ class RoleResourcePermissionRepository:
                     "permission": permission.value,
                 },
             )
+            row = result.scalar_one_or_none()
             await session.commit()
-            return result.rowcount > 0
+            return row is not None
 
-    async def get_role_resource_permissions(self, role_id: UUID) -> List[RoleResourcePermission]:
+    async def get_role_resource_permissions(
+        self, role_id: UUID
+    ) -> List[RoleResourcePermission]:
         """Get all resource permissions for a role."""
         async with get_db_session() as session:
             query = text(
@@ -874,7 +910,10 @@ class RoleResourcePermissionRepository:
             return [RoleResourcePermission(**dict(row._mapping)) for row in rows]
 
     async def list_roles_with_permission(
-        self, resource_type: ResourceType, resource_id: str, permission: ResourcePermission
+        self,
+        resource_type: ResourceType,
+        resource_id: str,
+        permission: ResourcePermission,
     ) -> List[UUID]:
         """List all roles with a specific permission on a resource."""
         async with get_db_session() as session:
@@ -920,8 +959,12 @@ class RoleResourcePermissionRepository:
 
         async with get_db_session() as session:
             # Build parameterized query for role_ids
-            role_params = {f"role_id_{i}": role_id for i, role_id in enumerate(role_ids)}
-            role_placeholders = ", ".join([f":role_id_{i}" for i in range(len(role_ids))])
+            role_params = {
+                f"role_id_{i}": role_id for i, role_id in enumerate(role_ids)
+            }
+            role_placeholders = ", ".join(
+                [f":role_id_{i}" for i in range(len(role_ids))]
+            )
 
             query = text(
                 f"""
@@ -989,6 +1032,8 @@ class PermissionHierarchyRepository:
             )
             await session.commit()
             row = result.fetchone()
+            if not row:
+                raise Exception("Failed to create permission hierarchy")
             return PermissionHierarchy(**dict(row._mapping))
 
     async def get_inherited_permissions(
@@ -1017,13 +1062,15 @@ class PermissionHierarchyRepository:
                     "resource_type": resource_type.value,
                     "resource_id": resource_id,
                     "user_id": user_id,
-                    "now": datetime.utcnow(),
+                    "now": datetime.now(timezone.utc),
                 },
             )
             rows = result.fetchall()
             return [ResourcePermissionGrant(**dict(row._mapping)) for row in rows]
 
-    async def get_children(self, resource_type: ResourceType, resource_id: str) -> List[PermissionHierarchy]:
+    async def get_children(
+        self, resource_type: ResourceType, resource_id: str
+    ) -> List[PermissionHierarchy]:
         """Get all child resources."""
         async with get_db_session() as session:
             query = text(
@@ -1037,8 +1084,8 @@ class PermissionHierarchyRepository:
             )
 
             result = await session.execute(
-                query, {"resource_type": resource_type.value, "resource_id": resource_id}
+                query,
+                {"resource_type": resource_type.value, "resource_id": resource_id},
             )
             rows = result.fetchall()
             return [PermissionHierarchy(**dict(row._mapping)) for row in rows]
-

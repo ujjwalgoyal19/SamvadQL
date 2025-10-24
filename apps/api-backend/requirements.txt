@@ -10,6 +10,7 @@ aiomysql==0.2.0
 snowflake-connector-python==3.6.0
 google-cloud-bigquery==3.13.0
 sqlalchemy[asyncio]==2.0.23
+alembic
 
 # LangChain and LLM providers
 langchain>=0.1.0

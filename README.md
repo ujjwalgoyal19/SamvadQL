@@ -44,30 +44,65 @@ The system follows a microservices architecture with:
 
 ### Development Setup
 
-1. **Clone the repository**
+**⚠️ Important**: With our Docker setup, you should NEVER need to rebuild on code changes. Volume mounts provide live updates. See `docs/DEV_WORKFLOW.md` for the complete guide.
 
-   ```bash
-   git clone <repository-url>
-   cd samvadql
+**First-Time Setup** (10-15 minutes):
+
+1. **Enable BuildKit** (Windows PowerShell):
+
+   ```powershell
+   $env:DOCKER_BUILDKIT = "1"
+   $env:COMPOSE_DOCKER_CLI_BUILD = "1"
    ```
 
-2. **Set up environment variables**
+2. **Configure environment**:
 
    ```bash
    cp .env.example .env
-   # Edit .env with your configuration
+   # Edit .env with your API keys
    ```
 
-3. **Start the development environment**
+3. **Build and start** (only needed once):
 
    ```bash
+   docker-compose build
    docker-compose up -d
    ```
 
-4. **Access the application**
-   - Frontend: [http://localhost:3000](http://localhost:3000)
-   - Backend API: [http://localhost:8000](http://localhost:8000)
-   - API Documentation: [http://localhost:8000/docs](http://localhost:8000/docs)
+**Daily Development** (30 seconds):
+
+```bash
+# Start services (NO --build flag needed)
+docker-compose up -d
+
+# Make code changes - they're live via volume mounts!
+# No rebuild needed for Python or TypeScript changes
+
+# View logs
+docker-compose logs -f backend
+
+# Stop when done
+docker-compose down
+```
+
+**When to Rebuild** (only when dependencies change):
+
+```bash
+# Added a package to requirements.txt?
+docker-compose build backend
+
+# Added a package to package.json?
+docker-compose build frontend
+```
+
+**Access Points**:
+
+- Frontend: <http://localhost:3000>
+- Backend API: <http://localhost:8000>
+- API Docs: <http://localhost:8000/docs>
+- Documentation: <http://localhost:3001>
+
+📖 **Read `docs/DEV_WORKFLOW.md` for troubleshooting and advanced workflows.**
 
 ### Local Development
 

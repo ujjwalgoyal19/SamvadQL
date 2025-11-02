@@ -25,3 +25,47 @@
 **/values.dev.yaml
 LICENSE
 README.md
+
+# Python cache and compiled files
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/.Python
+**/*.so
+**/*.egg
+**/*.egg-info
+**/dist
+**/build
+**/.pytest_cache
+**/.coverage
+**/.mypy_cache
+**/.ruff_cache
+
+# Virtual environments
+**/venv
+**/ENV
+**/env
+
+# IDE files
+**/*.swp
+**/*.swo
+**/*~
+**/.idea
+
+# OS files
+**/.DS_Store
+**/Thumbs.db
+
+# Logs
+**/*.log
+**/logs
+
+# Test artifacts
+**/htmlcov
+**/.tox
+
+# Database files
+**/*.db
+**/*.sqlite
+**/*.sqlite3
+

@@ -3,6 +3,7 @@
 This file provides guidance to WARP (warp.dev) when working with code in this repository.
 
 Project overview
+
 - Monorepo with three primary apps:
   - apps/api-backend: FastAPI (Python 3.11) backend with async DB connectors, migrations, and LLM/vector integrations
   - apps/web-frontend: React + TypeScript + Vite + Tailwind + shadcn/ui
@@ -11,14 +12,35 @@ Project overview
 
 Common commands
 Root (Docker Compose)
-- Start full stack in background
+
+- **First-time setup** (run setup script)
+  - Windows: .\scripts\dev-setup.ps1
+  - Linux/Mac: ./scripts/dev-setup.sh
+- **Daily: Start services** (NO --build flag!)
   - docker compose up -d
-- Stop stack and remove containers
-  - docker compose down
-- Follow logs for a specific service (e.g., backend)
+- **View logs for a service**
   - docker compose logs -f backend
+  - docker compose logs -f frontend
+- **Rebuild when dependencies change** (rare)
+  - docker compose build backend
+  - docker compose build frontend
+- **Stop and cleanup**
+  - docker compose down
+  - docker compose down -v  # Also remove volumes
+- **Full reset** (when things are broken)
+  - docker compose down -v
+  - docker compose build --no-cache
+  - docker compose up -d
+
+⚠️ Development Workflow Critical Info
+
+- Code changes are LIVE via volume mounts - no rebuild needed
+- Only rebuild when you change requirements.txt, package.json, or Dockerfiles
+- If you're rebuilding frequently, you're doing it wrong - read docs/DEV_WORKFLOW.md
+- Enable BuildKit for 3-5x faster builds: $env:DOCKER_BUILDKIT = "1" (PowerShell)
 
 Frontend (apps/web-frontend)
+
 - Install deps (pnpm recommended as per packageManager)
   - pnpm install
 - Start dev server
@@ -32,10 +54,11 @@ Frontend (apps/web-frontend)
 - Test all / single
   - pnpm test            # watch mode
   - pnpm test:run        # CI/non-watch
-  - pnpm test:run src/components/__tests__/QueryInput.test.tsx
+  - pnpm test:run src/components/**tests**/QueryInput.test.tsx
   - pnpm test:run -t "QueryInput"   # name pattern
 
 Backend (apps/api-backend)
+
 - Create venv and install deps (Python 3.11)
   - python -m venv .venv
   - .venv\Scripts\Activate.ps1   # Windows PowerShell
@@ -52,6 +75,7 @@ Backend (apps/api-backend)
   - python apps/api-backend/migrations/cli.py down <target_version>
 
 Docs (docs)
+
 - Local dev server (Mintlify)
   - npm start
 - Generate docs
@@ -61,6 +85,7 @@ Docs (docs)
   - docker compose up -d docs
 
 High-level architecture and flow
+
 - Backend API (FastAPI)
   - Entry: apps/api-backend/main.py defines app, CORS/GZip middleware, and health (/health) and readiness (/ready) probes
   - Versioned routes: apps/api-backend/api/v1.py mounted under /api/v1
@@ -85,7 +110,7 @@ High-level architecture and flow
   - Routing: React Router v7 (pages/*)
   - State: Redux Toolkit (store/slices/*)
   - Services: src/services
-    - api.ts: REST client (Axios) targeting VITE_API_URL (default http://localhost:8000)
+    - api.ts: REST client (Axios) targeting VITE_API_URL (default <http://localhost:8000>)
     - websocket.ts: Socket.io client targeting VITE_WS_URL (if used)
     - streamingClient.ts: client-side aggregator for progressive/streamed responses
   - Testing: Vitest + Testing Library, jsdom, setup at src/test/setup.ts
@@ -102,13 +127,15 @@ High-level architecture and flow
   - Data volumes for persistence (postgres_data, redis_data, qdrant_data, opensearch_data)
 
 Essential environment
+
 - Create a .env at repo root for docker-compose (no secrets in this file; use your secret manager to populate values at runtime)
 - Frontend: apps/web-frontend/.env
-  - VITE_API_URL=http://localhost:8000
-  - VITE_WS_URL=http://localhost:8000
+  - VITE_API_URL=<http://localhost:8000>
+  - VITE_WS_URL=<http://localhost:8000>
 - Backend: expects DATABASE_URL, REDIS_URL, vector DB URLs, and LLM provider keys via environment
 
 Key entry points and paths
+
 - Backend app: apps/api-backend/main.py
 - API v1 routes: apps/api-backend/api/v1.py
 - Auth routes: apps/api-backend/api/auth.py
@@ -119,10 +146,11 @@ Key entry points and paths
 - DB bootstrap: scripts/init-db.sql
 
 Testing specifics
+
 - Frontend (Vitest)
   - Config: apps/web-frontend/vitest.config.ts (jsdom, setup file, @ alias)
   - Run a focused test
-    - pnpm test:run src/components/__tests__/QueryInput.test.tsx
+    - pnpm test:run src/components/**tests**/QueryInput.test.tsx
     - pnpm test:run -t "QueryInput"
 - Backend (pytest)
   - Async tests supported (pytest-asyncio)
@@ -131,19 +159,21 @@ Testing specifics
     - pytest -k "metadata_service"
 
 Conventions and rules (project-specific)
+
 - Service boundaries: keep business logic in services/*; repositories/* should only handle DB access; models/* define Pydantic schemas
 - Validation and safety: SQL checked via sqlglot/sqlfluff; destructive ops and performance heuristics flagged in /api/v1/validate
 - Streaming: progressive responses emitted as SSE; frontend aggregates via streamingClient
 - UI components: prefer shadcn/ui for new components (src/components/ui)
 
 Agent preferences and MCP tools
+
 - Use up-to-date documentation when referencing libraries (Context7 MCP for docs lookup) per project preference
 - For UI work, prefer shadcn components and consult shadcn MCP where appropriate
 
 Notes
+
 - Postgres, Redis, and vector DBs (Qdrant or OpenSearch) are part of the default dev stack
 - Health endpoints
   - GET /health (liveness)
   - GET /ready (readiness; validates DB/Redis connectivity when configured)
 - When running locally without containers, ensure DATABASE_URL/REDIS_URL/etc. match your local services
-

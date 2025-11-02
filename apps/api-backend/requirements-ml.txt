@@ -1,0 +1,16 @@
+# LangChain and LLM providers
+langchain>=0.1.0
+langchain-openai>=0.0.2
+langchain-anthropic>=0.0.1
+langchain-community>=0.0.10
+langchain-core>=0.1.0
+langchain-experimental>=0.0.49
+
+# Vector database and embeddings
+qdrant-client==1.7.0
+opensearch-py==2.4.0
+sentence-transformers>=2.3.0
+
+# Cloud database connectors
+snowflake-connector-python==3.6.0
+google-cloud-bigquery==3.13.0

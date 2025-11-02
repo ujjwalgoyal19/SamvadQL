@@ -1,0 +1,65 @@
+  # Docker Compose Override for Hybrid Development
+# This file allows running backend Python code locally while keeping infrastructure in Docker
+# 
+# To use this approach:
+# 1. Rename this file to: docker-compose.override.yml
+# 2. Run: docker-compose up -d (only starts infrastructure services)
+# 3. Setup Python locally in apps/api-backend:
+#    python -m venv .venv
+#    .venv\Scripts\Activate.ps1  (Windows)
+#    source .venv/bin/activate   (Linux/Mac)
+#    pip install -r requirements.txt -r requirements-dev.txt
+# 4. Update .env to use localhost URLs:
+#    DATABASE_URL=postgresql://samvadql:password@localhost:5432/samvadql
+#    REDIS_URL=redis://localhost:6379
+#    QDRANT_URL=http://localhost:6333
+#    OPENSEARCH_URL=http://localhost:9200
+# 5. Run backend locally:
+#    cd apps/api-backend
+#    uvicorn main:app --reload
+#
+# Benefits:
+# - Instant startup (no container overhead)
+# - Native IDE debugging
+# - Fastest iteration on Python code
+# - Direct REPL access
+#
+# Trade-offs:
+# - Need to manage Python virtual environment
+# - Less production-like environment
+# - Requires Python 3.11 installed locally
+
+version: '3.9'
+
+services:
+  # Disable backend services - run locally instead
+  backend:
+    profiles:
+      - disabled
+  
+  worker:
+    profiles:
+      - disabled
+  
+  scheduler:
+    profiles:
+      - disabled
+  
+  # Expose infrastructure service ports to host
+  postgres:
+    ports:
+      - '5432:5432'
+  
+  redis:
+    ports:
+      - '6379:6379'
+  
+  qdrant:
+    ports:
+      - '6333:6333'
+      - '6334:6334'
+  
+  opensearch:
+    ports:
+      - '9200:9200'
+      - '9600:9600'

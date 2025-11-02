@@ -1,0 +1,36 @@
+# Core FastAPI and async dependencies
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# Database connectivity
+asyncpg==0.29.0
+aiomysql==0.2.0
+sqlalchemy[asyncio]==2.0.23
+alembic
+
+# SQL processing and validation
+sqlglot==20.1.0
+sqlfluff==2.3.5
+
+# Caching and background tasks
+redis[hiredis]==5.0.1
+celery==5.3.4
+
+# Authentication and security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+argon2-cffi==25.1.0
+python-multipart==0.0.6
+email-validator==2.2.0
+
+# Monitoring and logging
+structlog==23.2.0
+prometheus-client==0.19.0
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-mock==3.12.0
+httpx==0.25.2

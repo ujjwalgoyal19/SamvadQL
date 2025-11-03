@@ -42,6 +42,7 @@
 **File:** `c:\Users\accou\Documents\products\SamvadQL\.gitignore`
 
 **Current State:** ✅ Already correct
+
 ```
 poetry.lock
 ```
@@ -57,6 +58,7 @@ poetry.lock
 **Changes Made:**
 
 **Before:**
+
 ```markdown
 ### Poetry Dependency Management (Backend)
 
@@ -76,6 +78,7 @@ poetry update
 ```
 
 The `pyproject.toml` file defines all backend dependencies. Use `poetry.lock` for reproducible builds and deployments.
+
 ```
 
 **After:**
@@ -106,6 +109,7 @@ The `pyproject.toml` file defines all backend dependencies with version constrai
 - **CI/CD:** Each build resolves dependencies from `pyproject.toml`, ensuring all environments use compatible versions
 
 This approach maintains flexibility during active development while leveraging Poetry's built-in locking mechanism for reproducibility. If production deployments require strict version pinning across environments in the future, the lock file can be committed.
+
 ```
 
 **Improvements:**
@@ -142,6 +146,7 @@ RUN poetry install --no-dev --no-root
 ```
 
 **After:**
+
 ```dockerfile
 # Builder stage for Poetry
 FROM base as builder
@@ -166,6 +171,7 @@ RUN poetry install --no-dev --no-root
 ```
 
 **Improvements:**
+
 - ✅ Expanded explanation of policy
 - ✅ Clarifies that lock is created at build time
 - ✅ Emphasizes reproducibility guarantee
@@ -254,6 +260,7 @@ If any of the following situations arise, consider switching to **committed poet
    - Pre-resolved lock file speeds up builds significantly
 
 To migrate to committed lock file in the future:
+
 1. Remove `poetry.lock` from `.gitignore`
 2. Generate lock file: `cd apps/api-backend && poetry lock`
 3. Commit `poetry.lock` to repository
@@ -298,8 +305,8 @@ All comments now work together to establish a coherent **Poetry-Only Dependency 
 The poetry.lock policy has been clarified and documented consistently across all project files. The decision to **not commit poetry.lock** maintains flexibility for active development while leveraging Poetry's built-in locking mechanism for reproducibility at build time.
 
 All project documentation now clearly explains:
+
 - Why the lock file is not committed
 - How Poetry ensures reproducibility
 - Three scenarios: local dev, Docker builds, CI/CD
 - Path to change policy in the future if needed
-

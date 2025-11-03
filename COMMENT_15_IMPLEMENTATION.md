@@ -24,28 +24,35 @@ Created a comprehensive production environment template at `.env.production.exam
 **Content Sections:**
 
 #### Database Configuration (Production)
+
 ```env
 DATABASE_URL=postgresql://user:password@your-db-host:5432/samvadql_prod
 ```
+
 - Uses managed PostgreSQL service (RDS, Azure Database, etc.)
 - Includes backup and replication guidance
 
 #### Redis Configuration (Production)
+
 ```env
 REDIS_URL=redis://default:password@your-redis-host:6379/0
 ```
+
 - Uses managed Redis service (ElastiCache, Azure Cache, etc.)
 - Includes replication and persistence guidance
 
 #### Security
+
 ```env
 SECRET_KEY=your-production-secret-key-change-this-NOW
 ALGORITHM=HS256
 ```
+
 - Strong secret key requirement
 - Includes generation command: `python -c "import secrets; print(secrets.token_urlsafe(32))"`
 
 #### LLM Services Configuration
+
 ```env
 LLM_PROVIDER=openai
 OPENAI_API_KEY=sk-your-production-openai-key-here
@@ -54,48 +61,58 @@ LLM_TEMPERATURE=0.1
 LLM_MAX_TOKENS=2000
 ANTHROPIC_API_KEY=your-anthropic-api-key-here
 ```
+
 - Primary and fallback LLM providers
 - Model-specific settings
 - Temperature and token limits
 
 #### Pinecone Vector Database Configuration
+
 ```env
 PINECONE_API_KEY=your-pinecone-production-api-key
 PINECONE_INDEX_NAME=samvadql-prod
 PINECONE_ENVIRONMENT=us-east-1-aws
 PINECONE_NAMESPACE=
 ```
+
 - Covers both serverless and pod-based deployments
 - Multi-tenancy namespace support
 - Index naming conventions
 
 #### API Configuration
+
 ```env
 ALLOWED_ORIGINS=https://yourdomain.com
 BACKEND_CORS_ORIGINS=["https://yourdomain.com"]
 ```
+
 - Production domain configuration
 - CORS security settings
 
 #### Production Settings
+
 ```env
 DEBUG=false
 DEV_MODE=false
 LOG_LEVEL=INFO
 ```
+
 - Security-critical production flags
 - Logging configuration
 
 #### Deployment & Infrastructure
+
 ```env
 COMPOSE_PROJECT_NAME=samvadql-prod
 UVICORN_WORKERS=5
 UVICORN_TIMEOUT=120
 ```
+
 - Worker configuration guidance
 - Timeout settings for long-running operations
 
 #### Optional Advanced Configuration
+
 ```env
 DB_POOL_SIZE=20
 DB_MAX_OVERFLOW=10
@@ -103,11 +120,13 @@ REDIS_KEY_PREFIX=samvadql_prod:
 QUERY_TIMEOUT=30
 CACHE_TTL=3600
 ```
+
 - Database connection pooling
 - Cache expiration settings
 - Query execution limits
 
 #### Comprehensive Notes Section
+
 The file includes detailed production deployment checklist:
 
 ✓ Never commit actual .env.production to version control  
@@ -125,7 +144,8 @@ The file includes detailed production deployment checklist:
 
 **Changes Made:**
 
-#### Before:
+#### Before
+
 ```markdown
 ### Environment Variables
 
@@ -136,6 +156,7 @@ Create a `.env` file in the repository root with these key variables:
 DATABASE_URL=postgresql://user:password@localhost:5432/samvadql
 ...
 ```
+
 ```
 
 #### After:
@@ -182,6 +203,7 @@ cp .env.production.example .env.production
    - Proper logging configuration and monitoring
 
 See `.env.production.example` for all available configuration options and detailed documentation.
+
 ```
 
 **Improvements:**
@@ -286,18 +308,21 @@ env:
 ```
 
 ### AWS Secrets Manager
+
 ```bash
 # Reference in deployment
 $(aws secretsmanager get-secret-value --secret-id samvadql-prod --query SecretString)
 ```
 
 ### Azure Key Vault
+
 ```bash
 # Reference in deployment
 az keyvault secret show --name samvadql-db --vault-name samvadql-kv
 ```
 
 ### Docker Compose
+
 ```yaml
 # In docker-compose.prod.yml
 services:
@@ -312,11 +337,13 @@ services:
 ## How to Use `.env.production.example`
 
 ### Step 1: Copy Template
+
 ```bash
 cp .env.production.example .env.production
 ```
 
 ### Step 2: Edit with Production Values
+
 ```bash
 # Edit .env.production with your actual production credentials
 nano .env.production
@@ -325,18 +352,21 @@ vim .env.production
 ```
 
 ### Step 3: Verify Configuration
+
 - ✓ All required fields filled
 - ✓ No default/placeholder values
 - ✓ Security settings correct (DEBUG=false, etc.)
 - ✓ Database connections working
 
 ### Step 4: Add to Deployment
+
 - Do NOT commit `.env.production`
 - Add to `.gitignore` (already configured)
 - Pass via environment variables in CI/CD
 - Use platform's secrets management
 
 ### Step 5: Deploy
+
 ```bash
 # Using Docker Compose
 docker-compose --file docker-compose.prod.yml up -d
@@ -353,6 +383,7 @@ docker-compose -f docker-compose.prod.yml \
 ### From Development to Production
 
 1. **Copy template:**
+
    ```bash
    cp .env.production.example .env.production
    ```
@@ -381,7 +412,9 @@ docker-compose -f docker-compose.prod.yml \
 ## Integration Points
 
 ### Dockerfile Integration
+
 The Dockerfile reads environment variables at runtime:
+
 ```dockerfile
 ENV DATABASE_URL=${DATABASE_URL}
 ENV REDIS_URL=${REDIS_URL}
@@ -389,7 +422,9 @@ ENV SECRET_KEY=${SECRET_KEY}
 ```
 
 ### FastAPI Configuration
+
 Backend app reads from environment:
+
 ```python
 from pydantic import BaseSettings
 
@@ -402,6 +437,7 @@ class Settings(BaseSettings):
 ```
 
 ### Docker Compose Integration
+
 ```yaml
 backend:
   environment:
@@ -418,12 +454,15 @@ backend:
 **Comment 15 Implementation: COMPLETE** ✅
 
 **Files Created:**
+
 - ✅ `.env.production.example` - Comprehensive production template with 115+ lines of configuration and documentation
 
 **Files Updated:**
+
 - ✅ `README.md` - Added production environment section with security guidance
 
 **Key Features:**
+
 - ✅ All required production variables documented
 - ✅ Clear development vs. production distinction
 - ✅ Secrets management guidance for all major platforms
@@ -436,4 +475,3 @@ backend:
 - ✅ Multi-tenancy namespace support
 
 Production deployment is now well-documented and teams can quickly set up secure, scalable production environments.
-

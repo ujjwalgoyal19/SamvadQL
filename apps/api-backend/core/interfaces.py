@@ -1,7 +1,7 @@
 """Core interfaces for SamvadQL services."""
 
 from abc import ABC, abstractmethod
-from typing import AsyncIterator, List, Optional, Dict, Any
+from typing import AsyncIterator, List, Optional, Dict, Any, TYPE_CHECKING
 from langchain.schema import BaseMessage
 from langchain.callbacks.base import BaseCallbackHandler
 from models import (
@@ -13,6 +13,9 @@ from models import (
     DatabaseType,
     OptimizationSuggestion,
 )
+
+if TYPE_CHECKING:
+    from core.db.connectors.base import HealthCheckResult
 
 
 class LLMServiceInterface(ABC):
@@ -179,6 +182,23 @@ class DatabaseConnectorInterface(ABC):
     @abstractmethod
     async def list_tables(self) -> List[str]:
         """List all table names."""
+        pass
+
+    @abstractmethod
+    async def health_check(self) -> "HealthCheckResult":
+        """Perform database health check."""
+        pass
+
+    @property
+    @abstractmethod
+    def database_type(self) -> DatabaseType:
+        """Get database type."""
+        pass
+
+    @property
+    @abstractmethod
+    def is_connected(self) -> bool:
+        """Check if connector is connected."""
         pass
 
 

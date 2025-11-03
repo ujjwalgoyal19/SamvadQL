@@ -1,0 +1,14 @@
+{
+  "name": "@samvadql/api",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.13.1",
+  "scripts": {
+    "dev": "uvicorn main:app --reload --host 0.0.0.0 --port 8000",
+    "build": "echo 'Python build complete'",
+    "lint": "ruff check . && ruff format --check .",
+    "test": "pytest",
+    "type-check": "mypy .",
+    "clean": "find . -type d -name __pycache__ -exec rm -rf {} + && rm -rf .pytest_cache .mypy_cache dist"
+  }
+}

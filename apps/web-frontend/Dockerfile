@@ -1,35 +1,23 @@
-FROM node:20-alpine AS base
-
-# Install dependencies only when needed
-FROM base AS deps
-WORKDIR /app
-
-# Copy package files
-COPY package.json pnpm-lock.yaml* ./
-RUN corepack enable pnpm && pnpm i --frozen-lockfile
-
-# Rebuild the source code only when needed
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+FROM node:20-alpine AS pruner
+RUN npm install -g turbo pnpm@10.13.1
 COPY . .
+RUN turbo prune --scope=@samvadql/web --docker
 
-# Build the application
-RUN corepack enable pnpm && pnpm run build
+FROM node:20-alpine AS installer
+WORKDIR /app
+COPY --from=pruner /app/out/json/ .
+COPY --from=pruner /app/out/pnpm-lock.yaml .
+RUN corepack enable pnpm && pnpm install --frozen-lockfile
 
-# Production image, serve with nginx
-FROM nginx:alpine AS runner
-WORKDIR /usr/share/nginx/html
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY --from=pruner /app/out/full/ .
+COPY --from=installer /app/node_modules ./node_modules
+RUN corepack enable pnpm && pnpm turbo run build --filter=@samvadql/web
 
-# Remove default nginx static assets
-RUN rm -rf ./*
-
-# Copy the built application
-COPY --from=builder /app/dist .
-
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/nginx.conf
-
-EXPOSE 80
-
-CMD ["nginx", "-g", "daemon off;"]
+FROM node:20-alpine AS runtime
+WORKDIR /app
+RUN npm install -g serve
+COPY --from=builder /app/apps/web-frontend/dist ./dist
+EXPOSE 3000
+CMD ["serve", "-s", "dist", "-l", "3000"]

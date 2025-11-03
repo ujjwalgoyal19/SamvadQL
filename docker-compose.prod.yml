@@ -1,111 +1,133 @@
+version: '3.9'
+
 services:
-  # Production Documentation
-  docs:
-    build:
-      context: ./docs
-      dockerfile: Dockerfile
-    ports:
-      - '80:80'
-    volumes:
-      - ./backend:/source/backend:ro
-      - ./frontend:/source/frontend:ro
-    environment:
-      - NODE_ENV=production
-    networks:
-      - samvadql-network
-
-  # Backend API (Production)
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.prod
-    ports:
-      - '8000:8000'
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL}
-      - QDRANT_URL=${QDRANT_URL}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - SECRET_KEY=${SECRET_KEY}
-      - DEBUG=false
-    depends_on:
-      - postgres
-      - redis
-      - qdrant
-    networks:
-      - samvadql-network
-
-  # Frontend (Production)
+  # Frontend Application
   frontend:
     build:
       context: ./apps/web-frontend
       dockerfile: Dockerfile
+    container_name: samvadql_frontend_prod
+    restart: always
     ports:
-      - '3000:80'
+      - '3000:3000'
     environment:
-      - VITE_API_URL=${VITE_API_URL}
-      - VITE_WS_URL=${VITE_WS_URL}
+      - NODE_ENV=production
     depends_on:
       - backend
     networks:
       - samvadql-network
+    healthcheck:
+      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://localhost:3000']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Backend API
+  backend:
+    build:
+      context: ./apps/api-backend
+      dockerfile: Dockerfile
+    container_name: samvadql_backend_prod
+    restart: always
+    ports:
+      - '8000:8000'
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT}
+      - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - LLM_PROVIDER=${LLM_PROVIDER}
+      - LLM_MODEL=${LLM_MODEL}
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE}
+      - LLM_MAX_TOKENS=${LLM_MAX_TOKENS}
+      - SECRET_KEY=${SECRET_KEY}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - DEV_MODE=false
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - samvadql-network
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
 
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
+    container_name: samvadql_postgres_prod
+    restart: always
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     networks:
       - samvadql-network
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
 
   # Redis Cache
   redis:
     image: redis:7-alpine
+    container_name: samvadql_redis_prod
+    restart: always
+    ports:
+      - '6379:6379'
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
     networks:
       - samvadql-network
-
-  # Qdrant Vector Database
-  qdrant:
-    image: qdrant/qdrant:latest
-    volumes:
-      - qdrant_data:/qdrant/storage
-    environment:
-      - QDRANT__SERVICE__HTTP_PORT=6333
-      - QDRANT__SERVICE__GRPC_PORT=6334
-    networks:
-      - samvadql-network
-
-  # Background Job Worker
-  worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.prod
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL}
-      - QDRANT_URL=${QDRANT_URL}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-    depends_on:
-      - postgres
-      - redis
-      - qdrant
-    command: celery -A worker worker --loglevel=info
-    networks:
-      - samvadql-network
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
 
 volumes:
   postgres_data:
   redis_data:
-  qdrant_data:
 
 networks:
   samvadql-network:

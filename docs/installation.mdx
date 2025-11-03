@@ -1,6 +1,6 @@
 ---
-title: 'Installation'
-description: 'Complete installation guide for SamvadQL'
+title: "Installation"
+description: "Complete installation guide for SamvadQL"
 ---
 
 ## Prerequisites
@@ -110,7 +110,9 @@ If you prefer to run services individually:
 
       <Step title="Install dependencies">
         ```bash
-        pip install -r requirements.txt
+        cd apps/api-backend
+        poetry install
+        cd ../..
         ```
       </Step>
 
@@ -327,7 +329,7 @@ After installation, verify everything is working:
 
     **Solution**:
     - Activate virtual environment: `source .venv/bin/activate`
-    - Reinstall dependencies: `pip install -r requirements.txt`
+    - Reinstall dependencies: `cd apps/api-backend && poetry install`
     - Check Python version: `python --version` (should be 3.11+)
 
   </Accordion>

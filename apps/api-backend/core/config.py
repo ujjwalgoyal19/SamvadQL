@@ -1,12 +1,13 @@
 """Configuration management for SamvadQL backend."""
 
 from pathlib import Path
-from typing import Optional, List, Union
-from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings
+from typing import List, Optional, Union
 
-# Get the project root directory (two levels up from this file)
-PROJECT_ROOT = Path(__file__).parent.parent.parent
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Get the project root directory (three levels up from this file to reach repository root)
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 ENV_FILE = PROJECT_ROOT / ".env"
 
 
@@ -39,16 +40,22 @@ class Settings(BaseSettings):
     llm_temperature: float = Field(default=0.1, validation_alias="LLM_TEMPERATURE")
     llm_max_tokens: int = Field(default=2000, validation_alias="LLM_MAX_TOKENS")
 
-    # Vector Database Configuration
-    vector_db_provider: str = Field(
-        default="qdrant", validation_alias="VECTOR_DB_PROVIDER"
+    # Vector Database Configuration (Pinecone)
+    pinecone_api_key: str = Field(default="", validation_alias="PINECONE_API_KEY")
+    pinecone_environment: str = Field(
+        default="us-east-1-aws", validation_alias="PINECONE_ENVIRONMENT"
     )
-    qdrant_url: str = Field(
-        default="http://localhost:6333", validation_alias="QDRANT_URL"
+    pinecone_index_name: str = Field(
+        default="samvadql-vectors", validation_alias="PINECONE_INDEX_NAME"
     )
-    opensearch_url: str = Field(
-        default="http://localhost:9200", validation_alias="OPENSEARCH_URL"
-    )
+
+    # Embedding Configuration
+    embedding_model_name: str = Field(
+        default="text-embedding-3-small", validation_alias="EMBEDDING_MODEL_NAME"
+    )  # OpenAI model for embeddings
+    embedding_dimension: int = Field(
+        default=1536, validation_alias="EMBEDDING_DIMENSION"
+    )  # Dimension for OpenAI embeddings
 
     # Security
     secret_key: str = Field(
@@ -68,11 +75,16 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             # Handle comma-separated string
             if v.startswith("[") and v.endswith("]"):
-                # Already JSON format, let pydantic handle it
-                return v
-            else:
-                # Comma-separated string
-                return [origin.strip() for origin in v.split(",") if origin.strip()]
+                import json
+
+                try:
+                    parsed = json.loads(v)
+                    if isinstance(parsed, list):
+                        return parsed
+                except json.JSONDecodeError:
+                    pass
+            # Already JSON format, let pydantic handle it
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
         return v
 
     # Performance
@@ -83,10 +95,9 @@ class Settings(BaseSettings):
         default=30, validation_alias="QUERY_TIMEOUT_SECONDS"
     )
 
-    class Config:
-        env_file = ENV_FILE
-        case_sensitive = False
-        extra = "ignore"
+    model_config = SettingsConfigDict(
+        env_file=str(ENV_FILE), case_sensitive=False, extra="ignore"
+    )
 
 
 settings = Settings()

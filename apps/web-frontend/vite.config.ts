@@ -1,23 +1,31 @@
-import { defineConfig } from 'vite';
-import { fileURLToPath, URL } from 'node:url';
+import tailwindcss from "@tailwindcss/vite";
+import react from "@vitejs/plugin-react";
+import { fileURLToPath, URL } from "node:url";
+import { defineConfig } from "vite";
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
-    }
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+    },
   },
   server: {
+    host: "0.0.0.0",
     port: 3000,
-    host: true
+    hmr: {
+      port: 24678,
+      protocol: "ws",
+      clientPort: 24678,
+    },
+    watch: {
+      usePolling: true,
+      interval: 100,
+    },
   },
-  define: {
-    'process.env.VITE_API_URL': JSON.stringify(
-      process.env.VITE_API_URL || 'http://localhost:8000'
-    ),
-    'process.env.VITE_WS_URL': JSON.stringify(
-      process.env.VITE_WS_URL || 'http://localhost:8000'
-    )
-  }
+  preview: {
+    host: "0.0.0.0",
+    port: 3000,
+  },
 });

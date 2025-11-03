@@ -2,14 +2,18 @@
 Main FastAPI application entry point for SamvadQL.
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from contextlib import asynccontextmanager
-import uvicorn
+import logging
 
 from core.config import settings
-from models import QueryRequest
+from api.v1 import router as v1_router
+from api.auth import router as auth_router
+from api.permissions import router as permissions_router
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -42,57 +46,54 @@ app.add_middleware(
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
+# Include API routers
+app.include_router(v1_router)
+app.include_router(auth_router)
+app.include_router(permissions_router)
 
-# Health check endpoint
+
+# Health / readiness endpoint
 @app.get("/health")
 async def health_check():
-    """Health check endpoint."""
-    return {"status": "healthy", "service": "samvadql-backend"}
+    """Lightweight liveness probe (no external dependencies)."""
+    return {"status": "ok", "service": "samvadql-backend"}
 
 
-# API v1 routes
-@app.get("/api/v1/status")
-async def get_status():
-    """Get API status."""
-    return {
-        "status": "running",
-        "version": settings.api_version,
-        "environment": "development" if settings.debug else "production",
-    }
+@app.get("/ready")
+async def readiness_check():
+    """Readiness probe that validates critical dependencies.
 
+    Returns:
+        JSON containing component status (ok / error) and overall ready flag.
+    """
+    components = {}
+    overall_ok = True
 
-# Placeholder endpoints - will be implemented in later tasks
-@app.post("/api/v1/query")
-async def submit_query(request: QueryRequest):
-    """Submit natural language query for SQL generation."""
-    # Placeholder implementation
-    raise HTTPException(status_code=501, detail="Query generation not implemented yet")
+    # Database connectivity (optional import to avoid circulars at startup)
+    try:
+        from core.config import settings as _settings
+        import asyncpg  # lightweight check without pulling full ORM
+        dsn = _settings.database_url
+        # Only attempt if postgres URL pattern
+        if dsn and dsn.startswith("postgresql"):
+            conn = await asyncpg.connect(dsn)
+            await conn.execute("SELECT 1")
+            await conn.close()
+        components["database"] = "ok"
+    except Exception as e:  # pragma: no cover - defensive
+        components["database"] = f"error: {e}"; overall_ok = False
 
+    # Redis connectivity
+    try:
+        import redis.asyncio as redis  # type: ignore
+        from core.config import settings as _settings2
+        if _settings2.redis_url:
+            r = redis.from_url(_settings2.redis_url, decode_responses=True)
+            await r.ping()
+        components["redis"] = "ok"
+    except Exception as e:  # pragma: no cover
+        components["redis"] = f"error: {e}"; overall_ok = False
 
-@app.get("/api/v1/tables/{database_id}")
-async def get_tables(database_id: str):
-    """Get available tables for a database."""
-    # Placeholder implementation
-    raise HTTPException(status_code=501, detail="Table listing not implemented yet")
+    status_code = 200 if overall_ok else 503
+    return {"status": "ok" if overall_ok else "degraded", "ready": overall_ok, "components": components}, status_code
 
-
-@app.post("/api/v1/validate")
-async def validate_sql(sql: str, database_id: str):
-    """Validate SQL query."""
-    # Placeholder implementation
-    raise HTTPException(status_code=501, detail="SQL validation not implemented yet")
-
-
-@app.post("/api/v1/feedback")
-async def submit_feedback(feedback: dict):
-    """Submit user feedback."""
-    # Placeholder implementation
-    raise HTTPException(
-        status_code=501, detail="Feedback submission not implemented yet"
-    )
-
-
-if __name__ == "__main__":
-    uvicorn.run(
-        "main:app", host="0.0.0.0", port=8000, reload=settings.debug, log_level="info"
-    )

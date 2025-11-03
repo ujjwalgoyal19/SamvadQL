@@ -68,16 +68,24 @@ docker run -p 3000:3000 samvadql-frontend-dev
 ## Project Structure
 
 ```
+
+```
+
 src/
-├── components/          # React components
-│   ├── ui/             # shadcn/ui components
-│   ├── Layout.tsx      # Main layout component
-│   └── QueryEditor.tsx # Query input component
-├── pages/              # Page components
-│   └── HomePage.tsx    # Main page
-├── services/           # API and WebSocket services
-│   ├── api.ts         # REST API client
-│   └── websocket.ts   # WebSocket service
+├── components/ # React components
+│ ├── ui/ # shadcn/ui components
+│ ├── layout/ # Layout components
+│ │ ├── AppLayout.tsx # Authenticated app layout with sidebar
+│ │ ├── AuthLayout.tsx # Clean auth pages layout
+│ │ └── Navbar.tsx # Navigation component
+│ └── QueryEditor.tsx # Query input component
+├── pages/ # Page components
+│ └── HomePage.tsx # Main page
+├── services/ # API and WebSocket services
+│ ├── api.ts # REST API client
+│ └── websocket.ts # WebSocket service
+
+```
 ├── types/             # TypeScript type definitions
 ├── hooks/             # Custom React hooks
 ├── lib/               # Utility functions

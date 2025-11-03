@@ -1,5 +1,5 @@
 {
-  "name": "samvadql-frontend",
+  "name": "@samvadql/web",
   "version": "1.0.0",
   "description": "SamvadQL Text-to-SQL Frontend",
   "private": true,
@@ -11,10 +11,10 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "type-check": "tsc --noEmit",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "clean": "rm -rf .next dist node_modules"
   },
   "dependencies": {
-    "-": "^0.0.1",
     "@hookform/resolvers": "^3.3.0",
     "@radix-ui/react-checkbox": "^1.3.2",
     "@radix-ui/react-label": "^2.1.7",

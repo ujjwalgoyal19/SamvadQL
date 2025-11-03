@@ -421,17 +421,13 @@ docker-compose up -d
 ```powershell
 # Windows
 cd apps\api-backend
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-pip install -r requirements.txt -r requirements-dev.txt
+poetry install
 ```
 
 ```bash
 # Linux/Mac
 cd apps/api-backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt -r requirements-dev.txt
+poetry install
 ```
 
 4. **Update `.env` for local development:**

@@ -36,9 +36,9 @@ The fastest way to get SamvadQL running is with Docker Compose:
    ```
 
 4. **Access the application**
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:8000
-   - API Documentation: http://localhost:8000/docs
+   - Frontend: <http://localhost:3000>
+   - Backend API: <http://localhost:8000>
+   - API Documentation: <http://localhost:8000/docs>
 
 ## Manual Installation
 
@@ -62,7 +62,9 @@ If you prefer to run services individually:
 3. **Install dependencies**
 
    ```bash
-   pip install -r requirements.txt
+   cd apps/api-backend
+   poetry install
+   cd ../..
    ```
 
 4. **Set up database**
@@ -73,6 +75,7 @@ If you prefer to run services individually:
    ```
 
 5. **Start the backend server**
+
    ```bash
    uvicorn main:app --reload --host 0.0.0.0 --port 8000
    ```
@@ -92,6 +95,7 @@ If you prefer to run services individually:
    ```
 
 3. **Start development server**
+
    ```bash
    pnpm dev
    ```
@@ -105,6 +109,7 @@ If you prefer to run services individually:
    ```
 
 2. **Start Celery worker** (for background processing)
+
    ```bash
    cd apps/api-backend
    celery -A worker worker --loglevel=info
@@ -148,10 +153,10 @@ After installation, verify everything is working:
    ```
 
 2. **Check frontend**
-   Open http://localhost:3000 in your browser
+   Open <http://localhost:3000> in your browser
 
 3. **Test API endpoints**
-   Visit http://localhost:8000/docs for interactive API documentation
+   Visit <http://localhost:8000/docs> for interactive API documentation
 
 ## Troubleshooting
 
@@ -176,7 +181,7 @@ After installation, verify everything is working:
 **Backend import errors**
 
 - Activate virtual environment: `source .venv/bin/activate`
-- Reinstall dependencies: `pip install -r requirements.txt`
+- Reinstall dependencies: `cd apps/api-backend && poetry install`
 
 ### Getting Help
 

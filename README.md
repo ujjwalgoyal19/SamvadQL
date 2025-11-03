@@ -6,163 +6,288 @@ SamvadQL is an open-source Text-to-SQL conversational interface that enables use
 
 - **Natural Language Processing**: Convert natural language questions into SQL queries using advanced LLMs
 - **Real-time Streaming**: Get progressive query generation with live explanations
-- **Intelligent Schema Selection**: Automatic table and column recommendation using vector search
-- **Multi-Database Support**: Works with PostgreSQL, MySQL, Snowflake, and BigQuery
+- **Intelligent Schema Selection**: Automatic table and column recommendation using Pinecone vector search
+- **Multi-Database Support**: Works with PostgreSQL and MySQL
 - **SQL Validation**: Comprehensive syntax validation and safety checks
 - **Query Optimization**: Performance suggestions and optimization recommendations
 - **Interactive Refinement**: Edit and refine generated queries conversationally
 - **Audit & Compliance**: Complete audit logging and governance features
-- **Authentication & Authorization**: JWT-based authentication with ABAC (Attribute-Based Access Control)
-- **Resource-Level Permissions**: Fine-grained access control at database, table, and column levels
-- **Role-Based Access**: Flexible role management with permission inheritance
+- **Authentication & Authorization**: JWT-based authentication with role-based access control
 
 ## Architecture
 
-The system follows a microservices architecture with:
+The system is structured as a **Turborepo monorepo** with the following components:
 
-- **Frontend**: React with TypeScript, Vite, and Tailwind CSS
-  - Separate layouts for authentication and app pages
-  - Side navigation for authenticated users
-  - Redux for UI state management
-  - WebSocket for real-time streaming
-- **Backend**: FastAPI with Python, async/await support
-  - JWT-based authentication
-  - ABAC (Attribute-Based Access Control) for resource-level permissions
-  - Role-based access control with permission inheritance
-- **Vector Database**: Qdrant or OpenSearch for semantic search
-- **Cache Layer**: Redis for performance optimization
-- **Database Support**: Multiple database connectors
-- **Background Jobs**: Celery for async processing
+- **Frontend**: React with TypeScript, Vite, and Tailwind CSS (`apps/web-frontend`)
+  - Orchestrated by Turborepo with pnpm workspaces
+  - Runs locally: `pnpm dev` (starts on port 3001)
+
+- **Backend**: FastAPI with Python async/await support (`apps/api-backend`)
+  - Runs locally: `poetry run uvicorn main:app --reload` (starts on port 8000)
+  - Poetry for dependency management
+  
+- **Infrastructure (Docker only for persistence)**:
+  - PostgreSQL 15-alpine: Primary relational database
+  - Redis 7-alpine: Cache layer for performance optimization
+  - Pinecone: Cloud-based vector database for semantic search (no Docker needed)
+  
+- **Supported Databases**: PostgreSQL, MySQL connectors available
+- **Vector Search**: Pinecone for intelligent schema selection and semantic matching
 
 ## Quick Start
 
 ### Prerequisites
 
-- Docker and Docker Compose
-- Node.js 18+ (for local frontend development)
-- Python 3.11+ (for local backend development)
+- Docker and Docker Compose (for PostgreSQL and Redis infrastructure)
+- Node.js 20+ and pnpm 10.13.1+ (for frontend)
+- Python 3.11+ and Poetry (for backend)
+- Pinecone API key (create free account at [pinecone.io](https://pinecone.io))
 
-### Development Setup
+### Local Development Setup
 
-**⚠️ Important**: With our Docker setup, you should NEVER need to rebuild on code changes. Volume mounts provide live updates. See `docs/DEV_WORKFLOW.md` for the complete guide.
-
-**First-Time Setup** (10-15 minutes):
-
-1. **Enable BuildKit** (Windows PowerShell):
-
-   ```powershell
-   $env:DOCKER_BUILDKIT = "1"
-   $env:COMPOSE_DOCKER_CLI_BUILD = "1"
-   ```
-
-2. **Configure environment**:
-
-   ```bash
-   cp .env.example .env
-   # Edit .env with your API keys
-   ```
-
-3. **Build and start** (only needed once):
-
-   ```bash
-   docker-compose build
-   docker-compose up -d
-   ```
-
-**Daily Development** (30 seconds):
+**1. Clone and install dependencies:**
 
 ```bash
-# Start services (NO --build flag needed)
-docker-compose up -d
+git clone https://github.com/ujjwalgoyal19/SamvadQL.git
+cd SamvadQL
 
-# Make code changes - they're live via volume mounts!
-# No rebuild needed for Python or TypeScript changes
+# Install monorepo dependencies (pnpm workspaces)
+pnpm install
 
-# View logs
-docker-compose logs -f backend
-
-# Stop when done
-docker-compose down
+# Backend setup with Poetry
+cd apps/api-backend
+poetry install
+cd ../..
 ```
 
-**When to Rebuild** (only when dependencies change):
+**2. Configure environment:**
 
 ```bash
-# Added a package to requirements.txt?
-docker-compose build backend
+# Copy environment template to root
+cp .env.example .env
 
-# Added a package to package.json?
-docker-compose build frontend
+# Edit .env with your credentials:
+# - PINECONE_API_KEY: Your Pinecone API key
+# - OPENAI_API_KEY: Your OpenAI API key for LLM services
+# - DATABASE_URL: Postgres connection (set by docker-compose)
+# - REDIS_URL: Redis connection (set by docker-compose)
+```
+
+**3. Start infrastructure services (PostgreSQL & Redis only):**
+
+```bash
+docker-compose up -d
+```
+
+This starts:
+
+- PostgreSQL 15 on `localhost:5432`
+- Redis 7 on `localhost:6379`
+
+**4. Run both frontend and backend together:**
+
+```bash
+# From root directory - runs both apps via Turborepo
+pnpm dev
+```
+
+This will start:
+
+- Frontend at <http://localhost:3001> (Vite dev server)
+- Backend at <http://localhost:8000> (FastAPI + Uvicorn)
+
+**Or run individually in separate terminals:**
+
+```bash
+# Terminal 1 - Frontend
+cd apps/web-frontend
+pnpm dev
+
+# Terminal 2 - Backend  
+cd apps/api-backend
+poetry run uvicorn main:app --reload
 ```
 
 **Access Points**:
 
-- Frontend: <http://localhost:3000>
+- Frontend: <http://localhost:3001>
 - Backend API: <http://localhost:8000>
-- API Docs: <http://localhost:8000/docs>
-- Documentation: <http://localhost:3001>
+- API Documentation: <http://localhost:8000/docs> (Swagger UI)
 
-📖 **Read `docs/DEV_WORKFLOW.md` for troubleshooting and advanced workflows.**
-
-### Local Development
-
-#### Backend Development
+**Stop infrastructure when done:**
 
 ```bash
-cd backend
-pip install -r requirements.txt
-uvicorn main:app --reload
+docker-compose down
 ```
 
-#### Frontend Development
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
+📖 **For troubleshooting and advanced workflows, read `docs/DEV_WORKFLOW.md`**
 
 ## Project Structure
 
-```bash
-samvadql/
-├── backend/                 # FastAPI backend
-│   ├── api/                # API endpoints
-│   ├── core/               # Core configuration and interfaces
-│   ├── models/             # Data models
-│   ├── services/           # Business logic services
-│   ├── main.py            # Application entry point
-│   └── requirements.txt   # Python dependencies
-├── frontend/               # React/Next.js frontend
-│   ├── src/
-│   │   ├── app/           # Next.js app directory
-│   │   ├── components/    # React components
-│   │   ├── services/      # API and WebSocket services
-│   │   ├── types/         # TypeScript type definitions
-│   │   └── theme/         # Material-UI theme
-│   ├── package.json       # Node.js dependencies
-│   └── tsconfig.json      # TypeScript configuration
-├── shared/                 # Shared utilities and types
-├── scripts/               # Database initialization scripts
-├── docker-compose.yml     # Development environment
-└── .env.example          # Environment configuration template
+```
+SamvadQL/
+├── apps/
+│   ├── web-frontend/                # React + TypeScript frontend (Vite)
+│   │   ├── src/
+│   │   │   ├── components/         # React components
+│   │   │   ├── pages/              # Page components
+│   │   │   ├── services/           # API and WebSocket services
+│   │   │   ├── types/              # TypeScript type definitions
+│   │   │   └── store/              # Redux/Zustand state management
+│   │   ├── package.json            # Frontend dependencies
+│   │   ├── vite.config.ts          # Vite configuration
+│   │   ├── tsconfig.json           # TypeScript configuration
+│   │   └── tailwind.config.js      # Tailwind CSS configuration
+│   │
+│   └── api-backend/                # FastAPI backend
+│       ├── main.py                 # Application entry point
+│       ├── api/
+│       │   ├── v1.py              # API v1 endpoints
+│       │   ├── auth.py            # Authentication endpoints
+│       │   ├── dependencies.py    # FastAPI dependencies
+│       │   └── permissions.py     # Permission checks
+│       ├── services/              # Business logic services
+│       ├── repositories/          # Database access layer
+│       ├── models/                # Data models and schemas
+│       ├── core/
+│       │   ├── config.py         # Configuration (Pydantic settings)
+│       │   ├── interfaces.py     # Core interfaces
+│       │   ├── db/               # Database connections
+│       │   ├── logging/          # Logging configuration
+│       │   └── vector/           # Vector database clients
+│       ├── migrations/           # SQL migration scripts
+│       ├── pyproject.toml        # Poetry dependencies
+│       └── poetry.lock           # Locked dependency versions
+│
+├── shared/                        # Shared Python utilities and types
+│   ├── types.py                  # Shared type definitions
+│   └── utils.py                  # Shared utility functions
+│
+├── docs/                         # Documentation (Mintlify)
+│   ├── docs/
+│   │   ├── getting-started/     # Getting started guides
+│   │   ├── api/                 # API documentation
+│   │   ├── architecture/        # Architecture guides
+│   │   └── development/         # Development guides
+│   ├── mint.json                # Mintlify configuration
+│   ├── package.json             # Doc dependencies
+│   └── scripts/                 # Doc generation scripts
+│
+├── scripts/                      # Utility scripts
+│   ├── dev-setup.sh            # Development setup script
+│   ├── init-db.sql             # Database initialization
+│   └── migrations/             # Migration management
+│
+├── docker-compose.yml          # Infrastructure services
+├── docker-compose.override.yml.example
+├── package.json                # Root package.json
+├── pnpm-workspace.yaml         # pnpm workspace configuration
+├── turbo.json                  # Turborepo configuration
+├── .env.example                # Environment template
+└── README.md                   # This file
 ```
 
 ## Configuration
 
 ### Environment Variables
 
-Key configuration options:
+SamvadQL uses environment variables for configuration. Two templates are provided:
 
-- `DATABASE_URL`: Primary database connection string
-- `REDIS_URL`: Redis cache connection
-- `OPENAI_API_KEY`: OpenAI API key for LLM services
-- `QDRANT_URL`: Vector database connection
-- `SECRET_KEY`: JWT signing secret
+#### Development Environment
 
-### Database Setup
+Create a `.env` file in the repository root for local development:
 
-The system automatically initializes the database schema on startup. See `scripts/init-db.sql` for the complete schema.
+```env
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/samvadql
+REDIS_URL=redis://localhost:6379/0
+
+# Vector Search (Pinecone)
+PINECONE_API_KEY=your_pinecone_api_key
+PINECONE_ENVIRONMENT=your_pinecone_environment
+PINECONE_INDEX_NAME=samvadql-vectors
+
+# LLM Services
+OPENAI_API_KEY=your_openai_api_key
+LLM_PROVIDER=openai
+LLM_MODEL=gpt-4
+LLM_TEMPERATURE=0.1
+LLM_MAX_TOKENS=2000
+
+# Security
+SECRET_KEY=your-secret-key-for-jwt
+ALGORITHM=HS256
+
+# Backend
+BACKEND_CORS_ORIGINS=["http://localhost:3001"]
+DEBUG=true
+DEV_MODE=true
+```
+
+#### Production Environment
+
+For production deployments, use `.env.production.example` as a template:
+
+```bash
+cp .env.production.example .env.production
+# Edit .env.production with your production credentials
+```
+
+**Important:** Never commit `.env.production` to version control. Instead:
+
+1. **Use your deployment platform's secrets management:**
+   - **GitHub Actions:** GitHub Secrets
+   - **AWS:** AWS Secrets Manager or Parameter Store
+   - **Azure:** Azure Key Vault
+   - **Docker Compose:** Pass secrets via environment overrides or use `docker-compose.prod.yml`
+
+2. **Production configuration includes:**
+   - Managed PostgreSQL (AWS RDS, Azure Database, etc.)
+   - Managed Redis (AWS ElastiCache, Azure Cache, etc.)
+   - Pinecone serverless or pod-based index
+   - Strong, randomly generated `SECRET_KEY`
+   - HTTPS-only `ALLOWED_ORIGINS`
+   - `DEBUG=false` and `DEV_MODE=false` (critical for security)
+   - LLM API keys with appropriate quota and rate limits
+   - Proper logging configuration and monitoring
+
+See `.env.production.example` for all available configuration options and detailed documentation.
+
+### Database Initialization
+
+The database schema is automatically initialized on backend startup. To manually run migrations:
+
+```bash
+cd apps/api-backend
+python -m migrations.cli upgrade
+```
+
+### Poetry Dependency Management (Backend)
+
+Dependencies are managed via Poetry for the backend:
+
+```bash
+cd apps/api-backend
+
+# Install dependencies
+poetry install
+
+# Add a new dependency
+poetry add package_name
+
+# Update dependencies
+poetry update
+```
+
+**Dependency Lock Policy:**
+
+The `pyproject.toml` file defines all backend dependencies with version constraints. The `poetry.lock` file is **not committed to the repository** (excluded via `.gitignore`). Poetry automatically resolves and locks versions at build and install time:
+
+- **Local Development:** `poetry install` creates a local lock file for reproducible local environments
+- **Docker Builds:** `poetry install` in the Dockerfile resolves dependencies at build time, ensuring consistency
+- **CI/CD:** Each build resolves dependencies from `pyproject.toml`, ensuring all environments use compatible versions
+
+This approach maintains flexibility during active development while leveraging Poetry's built-in locking mechanism for reproducibility. If production deployments require strict version pinning across environments in the future, the lock file can be committed.
 
 ## Authentication & Authorization
 
@@ -357,61 +482,16 @@ This project is currently in active development. The current implementation incl
 - Frontend components and real-time streaming
 - Background services and job scheduling
 
-## Documentation
-
-Comprehensive documentation is available using Mintlify:
-
-### Quick Start Documentation
-
-```bash
-# Start documentation server with Docker (recommended)
-./scripts/dev-docs.sh    # Linux/Mac
-scripts\dev-docs.bat     # Windows
-
-# Or with Docker Compose directly:
-docker-compose up -d docs
-
-# Or manually (local development):
-cd docs && npm install && npm start
-```
-
-Visit [http://localhost:3001](http://localhost:3001) (Docker) or [http://localhost:3000](http://localhost:3000) (local) for:
-
-- 📖 **Getting Started**: Installation and quick start guides
-- 🏗️ **Architecture**: System design and component overview
-- 📚 **API Reference**: Auto-generated from backend code
-- 🧩 **Components**: Auto-generated from frontend components
-- 🛠️ **Development**: Setup, testing, and deployment guides
-
-### Auto-Generated Documentation
-
-The documentation system automatically generates:
-
-- **API docs** from Python docstrings and FastAPI routes
-- **Component docs** from React TypeScript interfaces
-- **Real-time updates** when source code changes
-
-```bash
-# With Docker (automatic generation)
-docker-compose up -d docs
-
-# Or generate manually (local development)
-cd docs && npm run generate-all-docs
-
-# Watch for changes and auto-generate (local development)
-cd docs && node scripts/watch-and-generate.js
-```
-
 ## Contributing
 
-This project follows a spec-driven development approach. See `.kiro/specs/samvadql-text-to-sql/` for detailed requirements, design, and implementation tasks.
+This project follows a spec-driven development approach. See the architecture documentation in `docs/` for detailed requirements and design.
 
 ### Development Workflow
 
-1. Read the [Development Setup](docs/docs/development/setup.md) guide
-2. Check the [Architecture Overview](docs/docs/architecture/overview.md)
-3. Follow the [Contributing Guidelines](docs/docs/development/contributing.md)
-4. Use the documentation system to understand APIs and components
+1. Read the architecture and setup guides in `docs/`
+2. Follow the branch naming conventions (feature/*, bugfix/*, etc.)
+3. Ensure all tests pass before submitting PRs
+4. Include clear commit messages referencing related issues
 
 ## License
 
@@ -419,6 +499,6 @@ This project follows a spec-driven development approach. See `.kiro/specs/samvad
 
 ## Support
 
-- 📖 [Documentation](http://localhost:3000) (after running docs server)
-- 🐛 [Issues](https://github.com/your-org/samvadql/issues)
-- 💬 [Discussions](https://github.com/your-org/samvadql/discussions)
+- 📖 [Documentation](docs/) - Architecture guides and development setup
+- 🐛 [Issues](https://github.com/ujjwalgoyal19/SamvadQL/issues) - Bug reports and feature requests
+- 💬 [Discussions](https://github.com/ujjwalgoyal19/SamvadQL/discussions) - Community discussions

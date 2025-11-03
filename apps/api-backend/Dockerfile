@@ -1,39 +1,60 @@
 # syntax=docker/dockerfile:1.4
-FROM python:3.11-slim
-
-# Build argument to control dev dependency installation
-ARG INSTALL_DEV=false
+FROM python:3.11-slim as base
 
 WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
-    build-essential \
-    gcc \
-    g++ \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy only requirements first to maximize layer cache reuse
-COPY requirements.txt requirements.txt
-COPY requirements-dev.txt requirements-dev.txt
+# Builder stage for Poetry
+FROM base as builder
 
-# Use BuildKit cache mount for pip to speed repeated installs during image rebuilds.
-# When building locally enable BuildKit: $env:DOCKER_BUILDKIT = "1" (PowerShell)
-RUN --mount=type=cache,id=pipcache,target=/root/.cache/pip \
-    pip install --upgrade pip && \
-    pip install -r requirements.txt && \
-    if [ "$INSTALL_DEV" = "true" ]; then pip install -r requirements-dev.txt; fi
+# Install Poetry
+RUN pip install poetry==1.7.1
 
-# Copy application code after dependencies
+# Copy only pyproject.toml
+# Note: poetry.lock is not committed to the repository (.gitignore).
+# Poetry resolves and locks versions at build time, ensuring reproducible builds
+# without requiring a committed lock file. This approach maintains flexibility
+# during active development while leveraging Poetry's built-in locking mechanism.
+COPY pyproject.toml ./
+
+# Configure Poetry to create virtualenv in project directory
+RUN poetry config virtualenvs.in-project true
+
+# Install dependencies
+# Poetry resolves versions from pyproject.toml and creates a lock at build time.
+# This ensures consistent dependency versions across all build environments (local, CI/CD, production).
+RUN poetry install --no-dev --no-root
+
+# Runtime stage
+FROM base as runtime
+
+# Create non-root user for security
+RUN useradd --create-home --shell /bin/bash app
+
+# Copy virtual environment from builder
+COPY --from=builder /app/.venv /app/.venv
+
+# Copy application code
 COPY . .
 
-# Create non-root user and set ownership
-RUN useradd --create-home --shell /bin/bash app \
-    && chown -R app:app /app
+# Set ownership to app user
+RUN chown -R app:app /app
+
 USER app
+
+# Set environment variables
+ENV PATH="/app/.venv/bin:$PATH"
+ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8000
 
-# Default command
-CMD ["sh", "-c", "python /tmp/debugpy --wait-for-client --listen 0.0.0.0:5679 -m uvicorn main:app --host 0.0.0.0 --port 8000"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Run with gunicorn in production
+CMD ["gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8000", "main:app"]

@@ -5,18 +5,15 @@
 # 1. Rename this file to: docker-compose.override.yml
 # 2. Run: docker-compose up -d (only starts infrastructure services)
 # 3. Setup Python locally in apps/api-backend:
-#    python -m venv .venv
-#    .venv\Scripts\Activate.ps1  (Windows)
-#    source .venv/bin/activate   (Linux/Mac)
-#    pip install -r requirements.txt -r requirements-dev.txt
+#    cd apps/api-backend
+#    poetry install
 # 4. Update .env to use localhost URLs:
 #    DATABASE_URL=postgresql://samvadql:password@localhost:5432/samvadql
 #    REDIS_URL=redis://localhost:6379
-#    QDRANT_URL=http://localhost:6333
-#    OPENSEARCH_URL=http://localhost:9200
+#    PINECONE_API_KEY=your_api_key
 # 5. Run backend locally:
 #    cd apps/api-backend
-#    uvicorn main:app --reload
+#    poetry run uvicorn main:app --reload
 #
 # Benefits:
 # - Instant startup (no container overhead)
@@ -27,7 +24,7 @@
 # Trade-offs:
 # - Need to manage Python virtual environment
 # - Less production-like environment
-# - Requires Python 3.11 installed locally
+# - Requires Python 3.11 and Poetry installed locally
 
 version: '3.9'
 

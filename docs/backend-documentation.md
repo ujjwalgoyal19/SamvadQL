@@ -116,7 +116,8 @@ apps/api-backend/
 ├── tests/                  # Test files
 ├── examples/               # Usage examples
 ├── main.py                # Application entry point
-└── requirements.txt       # Dependencies
+├── pyproject.toml         # Poetry dependencies
+└── poetry.lock            # Locked dependency versions
 ```
 
 ## Core Components
@@ -481,7 +482,7 @@ def parse_allowed_origins(cls, v):
 
 ```bash
 cd apps/api-backend
-pip install -r requirements.txt
+poetry install
 ```
 
 2. **Environment Configuration**:
@@ -634,16 +635,22 @@ def mock_llm_service():
 ### Docker Deployment
 
 ```dockerfile
-FROM python:3.11-slim
+FROM python:3.11-slim as base
 
 WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
 
+FROM base as builder
+RUN pip install poetry==1.7.1
+COPY pyproject.toml poetry.lock ./
+RUN poetry config virtualenvs.in-project true && poetry install --no-dev --no-root
+
+FROM base
+COPY --from=builder /app/.venv /app/.venv
 COPY . .
+ENV PATH="/app/.venv/bin:$PATH"
 EXPOSE 8000
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8000", "main:app"]
 ```
 
 ### Docker Compose

@@ -7,8 +7,6 @@ from models import DatabaseType
 from .base import BaseDatabaseConnector, ConnectionConfig
 from .postgresql import PostgreSQLConnector
 from .mysql import MySQLConnector
-from .snowflake import SnowflakeConnector
-from .bigquery import BigQueryConnector
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +17,6 @@ class DatabaseConnectorFactory:
     _connectors: Dict[DatabaseType, Type[BaseDatabaseConnector]] = {
         DatabaseType.POSTGRESQL: PostgreSQLConnector,
         DatabaseType.MYSQL: MySQLConnector,
-        DatabaseType.SNOWFLAKE: SnowflakeConnector,
-        DatabaseType.BIGQUERY: BigQueryConnector,
     }
 
     @classmethod
@@ -31,7 +27,7 @@ class DatabaseConnectorFactory:
         if database_type not in cls._connectors:
             raise ValueError(
                 f"Unsupported database type: {database_type}. "
-                f"Supported types: {list(cls._connectors.keys())}"
+                f"Supported types: PostgreSQL, MySQL"
             )
 
         connector_class = cls._connectors[database_type]

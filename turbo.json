@@ -1,0 +1,48 @@
+{
+  "$schema": "https://turbo.build/json-schema.json",
+  "globalEnv": [
+    "DATABASE_URL",
+    "REDIS_URL",
+    "PINECONE_API_KEY",
+    "PINECONE_ENVIRONMENT",
+    "PINECONE_INDEX_NAME",
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "SECRET_KEY",
+    "ALLOWED_ORIGINS",
+    "DEV_MODE"
+  ],
+  "tasks": {
+    "build": {
+      "outputs": [".next/**", "!.next/cache/**", "dist/**", "build/**"],
+      "cache": true,
+      "dependsOn": ["^build"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["^build"]
+    },
+    "lint": {
+      "cache": true,
+      "outputs": [],
+      "dependsOn": ["^build"]
+    },
+    "test": {
+      "outputs": ["coverage/**"],
+      "cache": true,
+      "dependsOn": ["^build"]
+    },
+    "type-check": {
+      "cache": true,
+      "outputs": [],
+      "dependsOn": ["^build"]
+    },
+    "clean": {
+      "cache": false
+    }
+  },
+  "remoteCache": {
+    "enabled": false
+  }
+}

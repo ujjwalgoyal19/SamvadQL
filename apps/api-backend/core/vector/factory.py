@@ -1,55 +1,85 @@
 """Vector database factory for creating database instances."""
 
-from typing import Optional
-from core.config import settings
-from models import VectorProvider
-from .base import VectorDatabaseInterface
-from .qdrant_client import QdrantVectorDatabase
-from .opensearch_client import OpenSearchVectorDatabase
 import structlog
+from core.config import settings
+
+from .base import VectorDatabaseInterface
+from .pinecone_client import PineconeVectorClient
 
 logger = structlog.get_logger(__name__)
+
+
+class PineconeConfigurationError(Exception):
+    """Raised when Pinecone configuration is invalid or incomplete."""
+    pass
+
+
+def _validate_pinecone_settings() -> None:
+    """
+    Validate Pinecone settings at startup to fail fast.
+
+    Raises:
+        PineconeConfigurationError: If any required setting is missing or invalid.
+    """
+    errors = []
+
+    # Validate API key (required)
+    if not settings.pinecone_api_key or settings.pinecone_api_key.strip() == "":
+        errors.append(
+            "PINECONE_API_KEY is required. Set the environment variable and restart the application."
+        )
+
+    # Validate index name (required)
+    if not settings.pinecone_index_name or settings.pinecone_index_name.strip() == "":
+        errors.append(
+            "PINECONE_INDEX_NAME is required. Set the environment variable and restart the application."
+        )
+
+    # Validate environment string (should not be empty)
+    if not settings.pinecone_environment or settings.pinecone_environment.strip() == "":
+        errors.append(
+            "PINECONE_ENVIRONMENT is required. Set the environment variable and restart the application."
+        )
+
+    # If any errors, raise with all of them
+    if errors:
+        error_message = "Pinecone configuration validation failed:\n  - " + "\n  - ".join(
+            errors
+        )
+        logger.error("pinecone_validation_failed", errors=errors)
+        raise PineconeConfigurationError(error_message)
+
+    logger.info(
+        "pinecone_settings_valid",
+        index_name=settings.pinecone_index_name,
+        environment=settings.pinecone_environment,
+    )
 
 
 class VectorDatabaseFactory:
     """Factory for creating vector database instances."""
 
     @staticmethod
-    def create_vector_database(
-        provider: Optional[VectorProvider] = None,
-        url: Optional[str] = None,
-    ) -> VectorDatabaseInterface:
-        """Create a vector database instance based on provider."""
+    def create_vector_database() -> VectorDatabaseInterface:
+        """
+        Create a Pinecone vector database instance.
 
-        # Use provider from settings if not specified
-        if provider is None:
-            provider_str = settings.vector_db_provider.lower()
-            try:
-                provider = VectorProvider(provider_str)
-            except ValueError:
-                logger.warning(
-                    "Invalid vector database provider in settings, defaulting to Qdrant",
-                    provider=provider_str,
-                )
-                provider = VectorProvider.QDRANT
+        Validates Pinecone settings at startup to fail fast on configuration errors.
 
-        # Create appropriate database instance
-        if provider == VectorProvider.QDRANT:
-            return QdrantVectorDatabase(url=url or settings.qdrant_url)
-        elif provider == VectorProvider.OPENSEARCH:
-            return OpenSearchVectorDatabase(url=url or settings.opensearch_url)
-        elif provider == VectorProvider.WEAVIATE:
-            # Weaviate implementation would go here
-            raise NotImplementedError("Weaviate implementation not yet available")
-        else:
-            raise ValueError(f"Unsupported vector database provider: {provider}")
+        Returns:
+            PineconeVectorClient: Configured and validated Pinecone client.
 
-    @staticmethod
-    def get_supported_providers() -> list[VectorProvider]:
-        """Get list of supported vector database providers."""
-        return [VectorProvider.QDRANT, VectorProvider.OPENSEARCH]
+        Raises:
+            PineconeConfigurationError: If Pinecone settings are missing or invalid.
+        """
+        # Validate settings before creating client
+        _validate_pinecone_settings()
 
-    @staticmethod
-    def is_provider_supported(provider: VectorProvider) -> bool:
-        """Check if a provider is supported."""
-        return provider in VectorDatabaseFactory.get_supported_providers()
+        logger.info("Creating Pinecone vector database client")
+        return PineconeVectorClient(
+            api_key=settings.pinecone_api_key,
+            environment=settings.pinecone_environment,
+            index_name=settings.pinecone_index_name,
+        )
+            index_name=settings.pinecone_index_name,
+        )

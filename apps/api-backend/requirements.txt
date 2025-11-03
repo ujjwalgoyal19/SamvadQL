@@ -1,6 +1,0 @@
-# Split requirements for optimal Docker layer caching
-# Core dependencies change more frequently (web framework, DB drivers, etc.)
-# ML dependencies are large but stable (LangChain, transformers, cloud connectors)
-
--r requirements-core.txt
--r requirements-ml.txt

@@ -30,7 +30,7 @@ class AuthService:
         self.pwd_context = CryptContext(
             schemes=["argon2"],
             argon2__time_cost=3,
-            argon2__memory_cost_kib=131072,
+            argon2__memory_cost=131072,
             argon2__parallelism=1,
         )
         self.secret_key = settings.secret_key

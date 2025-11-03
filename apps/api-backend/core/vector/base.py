@@ -1,12 +1,13 @@
 """Base vector database interface."""
 
 from abc import ABC, abstractmethod
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
+
 from models import (
     VectorDocument,
-    VectorSearchResult,
-    VectorIndexConfig,
     VectorHealthStatus,
+    VectorIndexConfig,
+    VectorSearchResult,
 )
 
 
@@ -39,19 +40,26 @@ class VectorDatabaseInterface(ABC):
         pass
 
     @abstractmethod
-    async def upsert_document(self, index_name: str, document: VectorDocument) -> bool:
+    async def upsert_document(
+        self, index_name: str, document: VectorDocument, namespace: Optional[str] = None
+    ) -> bool:
         """Insert or update a document in the index."""
         pass
 
     @abstractmethod
     async def upsert_documents(
-        self, index_name: str, documents: List[VectorDocument]
+        self,
+        index_name: str,
+        documents: List[VectorDocument],
+        namespace: Optional[str] = None,
     ) -> int:
         """Insert or update multiple documents in the index."""
         pass
 
     @abstractmethod
-    async def delete_document(self, index_name: str, document_id: str) -> bool:
+    async def delete_document(
+        self, index_name: str, document_id: str, namespace: Optional[str] = None
+    ) -> bool:
         """Delete a document from the index."""
         pass
 
@@ -63,6 +71,7 @@ class VectorDatabaseInterface(ABC):
         limit: int = 10,
         filters: Optional[Dict[str, Any]] = None,
         min_score: Optional[float] = None,
+        namespace: Optional[str] = None,
     ) -> List[VectorSearchResult]:
         """Search for similar vectors."""
         pass
@@ -75,6 +84,7 @@ class VectorDatabaseInterface(ABC):
         limit: int = 10,
         filters: Optional[Dict[str, Any]] = None,
         min_score: Optional[float] = None,
+        namespace: Optional[str] = None,
     ) -> List[VectorSearchResult]:
         """Search using text query (will be embedded internally)."""
         pass
@@ -100,4 +110,5 @@ class VectorDatabaseInterface(ABC):
     @abstractmethod
     def is_connected(self) -> bool:
         """Check if connected to the vector database."""
+        pass
         pass

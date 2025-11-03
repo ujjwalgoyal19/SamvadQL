@@ -9,12 +9,10 @@ from models import (
     VectorDocument,
     VectorSearchResult,
     VectorIndexConfig,
-    VectorProvider,
     EmbeddingModel,
     VectorHealthStatus,
 )
-from core.vector.qdrant_client import QdrantVectorDatabase
-from core.vector.opensearch_client import OpenSearchVectorDatabase
+from core.vector.pinecone_client import PineconeVectorClient
 from core.vector.factory import VectorDatabaseFactory
 
 

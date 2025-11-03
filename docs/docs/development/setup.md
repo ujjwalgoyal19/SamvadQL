@@ -72,7 +72,9 @@ docker-compose up -d
 3. **Install dependencies**
 
    ```bash
-   pip install -r requirements.txt
+   cd apps/api-backend
+   poetry install
+   cd ../..
    ```
 
 4. **Set up database**
@@ -84,6 +86,7 @@ docker-compose up -d
    ```
 
 5. **Start development server**
+
    ```bash
    uvicorn main:app --reload --host 0.0.0.0 --port 8000
    ```
@@ -104,6 +107,7 @@ docker-compose up -d
    ```
 
 3. **Start development server**
+
    ```bash
    pnpm dev
    # or: npm run dev
@@ -136,6 +140,7 @@ docker-compose up -d
    ```
 
 5. **Enable auto-generation** (in another terminal)
+
    ```bash
    node scripts/watch-and-generate.js
    ```
@@ -164,7 +169,7 @@ docker-compose up -d
    - Documentation automatically updates
 
 4. **View documentation**
-   - Visit http://localhost:3000
+   - Visit <http://localhost:3000>
    - API docs update automatically from Python code
    - Component docs update from React components
 
@@ -348,11 +353,11 @@ npm run generate-all-docs
 
 - Activate virtual environment
 - Check PYTHONPATH is set correctly
-- Reinstall dependencies: `pip install -r requirements.txt`
+- Reinstall dependencies: `cd apps/api-backend && poetry install`
 
 ### Getting Help
 
-1. **Check documentation**: http://localhost:3000 (after starting docs)
+1. **Check documentation**: <http://localhost:3000> (after starting docs)
 2. **Review logs**: `docker-compose logs -f [service-name]`
 3. **Check issues**: GitHub issues for known problems
 4. **Ask questions**: GitHub discussions for help

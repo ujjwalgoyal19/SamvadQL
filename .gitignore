@@ -1,102 +1,52 @@
 .kiro/
 .vscode/
 
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
 .Python
 build/
-develop-eggs/
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
 *.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-.env
-.venv
-env/
+.venv/
 venv/
-ENV/
-env.bak/
-venv.bak/
-.python-version
-.coverage
-htmlcov/
 .pytest_cache/
-.tox/
-.nox/
-.hypothesis/
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
+.mypy_cache/
+.ruff_cache/
+poetry.lock
 
-# React/Node.js
-node_modules/
-npm-debug.log
-yarn-error.log
-yarn-debug.log
-.pnp.*
-.pnp.js
-.yarn/
-.npm/
-/build
-/dist
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.eslintcache
-.DS_Store
-coverage/
-.vercel
+# Turborepo
+.turbo/
+
+# Next.js
 .next/
 out/
-storybook-static/
-.pnpm-store/
 
-# IDE/Editors
-.idea/
+# Environment
+.env
+.env.local
+.env.production
+.env.*.local
+
+# IDE
 .vscode/
+.idea/
 *.swp
 *.swo
-*~
-.DS_Store
-.project
-.classpath
-.settings/
-*.sublime-workspace
-*.sublime-project
 
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-
-# Database
-*.sqlite3
-*.db
-
-# Misc
+# OS
 .DS_Store
 Thumbs.db
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+
+# Logs
+logs/
+*.log
+
+# Docker
+docker-compose.override.yml
